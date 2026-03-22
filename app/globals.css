@@ -1,26 +1,35 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: #0f1729;
+  --color-surface: #1a2744;
+  --color-surface-light: #243352;
+  --color-accent: #f59e0b;
+  --color-accent-dim: #b45309;
+  --color-blue: #3b82f6;
+  --color-text: #f1f5f9;
+  --color-text-dim: #94a3b8;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --font-sans: var(--font-outfit);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent overscroll bounce on mobile */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Active state for buttons */
+button:active,
+a:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
 }
