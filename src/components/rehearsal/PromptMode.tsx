@@ -7,7 +7,7 @@ import { SlideHeader } from "./SlideHeader";
 import { VoiceStatus } from "./VoiceStatus";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
-import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
+import { speak, stop } from "@/lib/speech/synthesis";
 import { slideTransition } from "@/lib/audio/chime";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { Slide } from "@/types/talk";
@@ -37,11 +37,12 @@ export function PromptMode({
   onComplete,
   onUsedHelp,
 }: PromptModeProps) {
-  const { speechRate, voiceName, enableVoiceCommands } = useSettingsStore();
+  const { speechRate, voiceName } = useSettingsStore();
   const [status, setStatus] = useState<"playing" | "listening" | "idle">("idle");
   const [revealed, setRevealed] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
@@ -63,15 +64,36 @@ export function PromptMode({
     return null;
   }, []);
 
+  // Stop speech recognition
+  const stopListening = useCallback(() => {
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Ignore errors when stopping
+      }
+      recognitionRef.current = null;
+    }
+  }, []);
+
+  // Handlers need to be refs to avoid stale closures
+  const handleNextRef = useRef<() => void>(() => {});
+  const handleBackRef = useRef<() => void>(() => {});
+  const handleRepeatRef = useRef<() => void>(() => {});
+  const handleRevealRef = useRef<() => void>(() => {});
+
   // Start speech recognition
   const startListening = useCallback(() => {
-    if (!enableVoiceCommands || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.warn("Speech recognition not supported");
+      return;
+    }
 
-    // Don't start if TTS is speaking
-    if (isSpeaking()) return;
+    stopListening();
 
     try {
       const recognition = new SpeechRecognition();
@@ -80,7 +102,6 @@ export function PromptMode({
       recognition.lang = "en-US";
 
       recognition.onresult = (event) => {
-        // Build full transcript from all results
         let fullTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript;
@@ -88,30 +109,30 @@ export function PromptMode({
         setTranscript(fullTranscript);
 
         const last = event.results[event.results.length - 1];
-        const command = checkCommand(last[0].transcript);
-        if (command && last.isFinal) {
-          recognition.stop();
-
-          switch (command) {
-            case "next":
-              handleNext();
-              break;
-            case "back":
-              handleBack();
-              break;
-            case "repeat":
-              handleRepeat();
-              break;
-            case "reveal":
-              handleReveal();
-              break;
+        if (last.isFinal) {
+          const command = checkCommand(last[0].transcript);
+          if (command) {
+            switch (command) {
+              case "next":
+                handleNextRef.current();
+                break;
+              case "back":
+                handleBackRef.current();
+                break;
+              case "repeat":
+                handleRepeatRef.current();
+                break;
+              case "reveal":
+                handleRevealRef.current();
+                break;
+            }
           }
         }
       };
 
       recognition.onend = () => {
-        // Auto-restart if still in listening mode
-        if (status === "listening" && !isSpeaking()) {
+        // Auto-restart if we should still be listening
+        if (isListeningRef.current) {
           try {
             recognition.start();
           } catch {
@@ -128,19 +149,12 @@ export function PromptMode({
 
       recognition.start();
       recognitionRef.current = recognition;
+      isListeningRef.current = true;
       setStatus("listening");
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
     }
-  }, [enableVoiceCommands, checkCommand, status]);
-
-  // Stop speech recognition
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-  }, []);
+  }, [checkCommand, stopListening]);
 
   // Speak the slide title and start listening
   const speakTitle = useCallback(() => {
@@ -158,16 +172,7 @@ export function PromptMode({
     });
   }, [currentSlide.title, speechRate, voiceName, startListening, stopListening]);
 
-  // Initial title speak
-  useEffect(() => {
-    speakTitle();
-    return () => {
-      stop();
-      stopListening();
-    };
-  }, [currentIndex]); // Re-run when slide changes
-
-  const handleReveal = () => {
+  const handleReveal = useCallback(() => {
     stopListening();
     setRevealed(true);
     onUsedHelp();
@@ -180,14 +185,14 @@ export function PromptMode({
         startListening();
       },
     });
-  };
+  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp]);
 
-  const handleRepeat = () => {
+  const handleRepeat = useCallback(() => {
     stop();
     speakTitle();
-  };
+  }, [speakTitle]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     stop();
     stopListening();
     if (isLastSlide) {
@@ -196,30 +201,41 @@ export function PromptMode({
       slideTransition();
       onNext();
     }
-  };
+  }, [isLastSlide, onComplete, onNext, stopListening]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     stop();
     stopListening();
     onPrev();
-  };
+  }, [onPrev, stopListening]);
+
+  // Update refs
+  handleNextRef.current = handleNext;
+  handleBackRef.current = handleBack;
+  handleRepeatRef.current = handleRepeat;
+  handleRevealRef.current = handleReveal;
+
+  // Initial title speak
+  useEffect(() => {
+    speakTitle();
+    return () => {
+      stop();
+      stopListening();
+    };
+  }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-full">
-      {/* Progress */}
       <ProgressBar value={progress} size="lg" className="mb-6" />
 
-      {/* Slide Info */}
       <SlideHeader
         currentSlide={currentIndex + 1}
         totalSlides={slides.length}
         title={currentSlide.title}
       />
 
-      {/* Status */}
       <VoiceStatus status={status} />
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto mb-6">
         {revealed ? (
           <div className="bg-surface rounded-[var(--radius)] p-4">
@@ -238,7 +254,6 @@ export function PromptMode({
           </div>
         )}
 
-        {/* Show transcript and score */}
         {transcript && (
           <TranscriptScore
             transcript={transcript}
@@ -248,7 +263,6 @@ export function PromptMode({
         )}
       </div>
 
-      {/* Controls */}
       <RehearsalControls
         onBack={handleBack}
         onRepeat={handleRepeat}

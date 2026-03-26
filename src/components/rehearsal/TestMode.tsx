@@ -7,7 +7,7 @@ import { SlideHeader } from "./SlideHeader";
 import { VoiceStatus } from "./VoiceStatus";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
-import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
+import { speak, stop } from "@/lib/speech/synthesis";
 import { slideTransition } from "@/lib/audio/chime";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { Slide } from "@/types/talk";
@@ -21,7 +21,6 @@ interface TestModeProps {
   onUsedHelp: () => void;
 }
 
-// Voice command keywords
 const COMMANDS = {
   next: ["next", "next slide", "forward", "continue", "skip", "move on", "got it"],
   back: ["back", "previous", "go back", "last slide", "before"],
@@ -37,41 +36,48 @@ export function TestMode({
   onComplete,
   onUsedHelp,
 }: TestModeProps) {
-  const { speechRate, voiceName, enableVoiceCommands } = useSettingsStore();
+  const { speechRate, voiceName } = useSettingsStore();
   const [status, setStatus] = useState<"playing" | "listening" | "idle">("idle");
   const [helpUsed, setHelpUsed] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
   const progress = ((currentIndex + 1) / slides.length) * 100;
 
-  // Check for voice commands in transcript
   const checkCommand = useCallback((text: string): string | null => {
     const words = text.toLowerCase().split(/\s+/).slice(-5);
     const phrase = words.join(" ");
-
     for (const [command, phrases] of Object.entries(COMMANDS)) {
       for (const p of phrases) {
-        if (phrase.includes(p)) {
-          return command;
-        }
+        if (phrase.includes(p)) return command;
       }
     }
     return null;
   }, []);
 
-  // Start speech recognition
-  const startListening = useCallback(() => {
-    if (!enableVoiceCommands || typeof window === "undefined") return;
+  const stopListening = useCallback(() => {
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
+  }, []);
 
+  const handleNextRef = useRef<() => void>(() => {});
+  const handleBackRef = useRef<() => void>(() => {});
+  const handleRepeatRef = useRef<() => void>(() => {});
+  const handleHelpRef = useRef<() => void>(() => {});
+
+  const startListening = useCallback(() => {
+    if (typeof window === "undefined") return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
-    // Don't start if TTS is speaking
-    if (isSpeaking()) return;
+    stopListening();
 
     try {
       const recognition = new SpeechRecognition();
@@ -80,7 +86,6 @@ export function TestMode({
       recognition.lang = "en-US";
 
       recognition.onresult = (event) => {
-        // Build full transcript from all results
         let fullTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript;
@@ -88,35 +93,22 @@ export function TestMode({
         setTranscript(fullTranscript);
 
         const last = event.results[event.results.length - 1];
-        const command = checkCommand(last[0].transcript);
-        if (command && last.isFinal) {
-          recognition.stop();
-
-          switch (command) {
-            case "next":
-              handleNext();
-              break;
-            case "back":
-              handleBack();
-              break;
-            case "repeat":
-              handleRepeat();
-              break;
-            case "help":
-              handleHelp();
-              break;
+        if (last.isFinal) {
+          const command = checkCommand(last[0].transcript);
+          if (command) {
+            switch (command) {
+              case "next": handleNextRef.current(); break;
+              case "back": handleBackRef.current(); break;
+              case "repeat": handleRepeatRef.current(); break;
+              case "help": handleHelpRef.current(); break;
+            }
           }
         }
       };
 
       recognition.onend = () => {
-        // Auto-restart if still in listening mode
-        if (status === "listening" && !isSpeaking()) {
-          try {
-            recognition.start();
-          } catch {
-            // Ignore restart errors
-          }
+        if (isListeningRef.current) {
+          try { recognition.start(); } catch {}
         }
       };
 
@@ -128,140 +120,81 @@ export function TestMode({
 
       recognition.start();
       recognitionRef.current = recognition;
+      isListeningRef.current = true;
       setStatus("listening");
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
     }
-  }, [enableVoiceCommands, checkCommand, status]);
+  }, [checkCommand, stopListening]);
 
-  // Stop speech recognition
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-  }, []);
-
-  // Speak the slide number and title, then start listening
   const speakPrompt = useCallback(() => {
     setHelpUsed(false);
     setTranscript("");
     stopListening();
     setStatus("playing");
 
-    const prompt = `Slide ${currentIndex + 1}: ${currentSlide.title}`;
-    speak(prompt, {
+    speak(`Slide ${currentIndex + 1}: ${currentSlide.title}`, {
       rate: speechRate,
       voiceName: voiceName || undefined,
-      onEnd: () => {
-        startListening();
-      },
+      onEnd: () => startListening(),
     });
   }, [currentIndex, currentSlide.title, speechRate, voiceName, startListening, stopListening]);
 
-  // Initial prompt speak
-  useEffect(() => {
-    speakPrompt();
-    return () => {
-      stop();
-      stopListening();
-    };
-  }, [currentIndex]); // Re-run when slide changes
-
-  const handleHelp = () => {
+  const handleHelp = useCallback(() => {
     stopListening();
     setHelpUsed(true);
     onUsedHelp();
     setStatus("playing");
-
     speak(currentSlide.notes, {
       rate: speechRate,
       voiceName: voiceName || undefined,
-      onEnd: () => {
-        startListening();
-      },
+      onEnd: () => startListening(),
     });
-  };
+  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp]);
 
-  const handleRepeat = () => {
+  const handleRepeat = useCallback(() => { stop(); speakPrompt(); }, [speakPrompt]);
+
+  const handleNext = useCallback(() => {
     stop();
+    stopListening();
+    if (isLastSlide) onComplete();
+    else { slideTransition(); onNext(); }
+  }, [isLastSlide, onComplete, onNext, stopListening]);
+
+  const handleBack = useCallback(() => { stop(); stopListening(); onPrev(); }, [onPrev, stopListening]);
+
+  handleNextRef.current = handleNext;
+  handleBackRef.current = handleBack;
+  handleRepeatRef.current = handleRepeat;
+  handleHelpRef.current = handleHelp;
+
+  useEffect(() => {
     speakPrompt();
-  };
-
-  const handleNext = () => {
-    stop();
-    stopListening();
-    if (isLastSlide) {
-      onComplete();
-    } else {
-      slideTransition();
-      onNext();
-    }
-  };
-
-  const handleBack = () => {
-    stop();
-    stopListening();
-    onPrev();
-  };
+    return () => { stop(); stopListening(); };
+  }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col h-full">
-      {/* Progress */}
       <ProgressBar value={progress} size="lg" className="mb-6" />
-
-      {/* Slide Info */}
-      <SlideHeader
-        currentSlide={currentIndex + 1}
-        totalSlides={slides.length}
-        title={currentSlide.title}
-      />
-
-      {/* Status */}
+      <SlideHeader currentSlide={currentIndex + 1} totalSlides={slides.length} title={currentSlide.title} />
       <VoiceStatus status={status} />
 
-      {/* Content Area */}
       <div className="flex-1 overflow-y-auto mb-6">
         {helpUsed ? (
           <div className="bg-surface rounded-[var(--radius)] p-4">
-            <div className="text-xs text-text-dim uppercase tracking-wide mb-2">
-              Notes (help used)
-            </div>
-            <p className="text-base leading-relaxed whitespace-pre-wrap">
-              {currentSlide.notes}
-            </p>
+            <div className="text-xs text-text-dim uppercase tracking-wide mb-2">Notes (help used)</div>
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{currentSlide.notes}</p>
           </div>
         ) : (
           <div className="text-center">
-            <p className="text-text-dim mb-4">
-              Recite everything from memory.<br />
-              Say &quot;help&quot; if you get stuck.
-            </p>
-            <Button onClick={handleHelp} variant="secondary">
-              Need Help
-            </Button>
+            <p className="text-text-dim mb-4">Recite everything from memory.<br />Say &quot;help&quot; if you get stuck.</p>
+            <Button onClick={handleHelp} variant="secondary">Need Help</Button>
           </div>
         )}
-
-        {/* Show transcript and score - always show score in test mode */}
-        {transcript && (
-          <TranscriptScore
-            transcript={transcript}
-            originalNotes={currentSlide.notes}
-            showScore={true}
-          />
-        )}
+        {transcript && <TranscriptScore transcript={transcript} originalNotes={currentSlide.notes} showScore={true} />}
       </div>
 
-      {/* Controls */}
-      <RehearsalControls
-        onBack={handleBack}
-        onRepeat={handleRepeat}
-        onNext={handleNext}
-        isFirstSlide={isFirstSlide}
-        isLastSlide={isLastSlide}
-        nextLabel="Got it"
-      />
+      <RehearsalControls onBack={handleBack} onRepeat={handleRepeat} onNext={handleNext} isFirstSlide={isFirstSlide} isLastSlide={isLastSlide} nextLabel="Got it" />
     </div>
   );
 }

@@ -70,9 +70,16 @@ export function speak(
     };
 
     utterance.onerror = (e) => {
-      console.error("Speech synthesis error:", e);
+      // Ignore "interrupted" and "canceled" errors - these are expected when stopping
+      const error = e as SpeechSynthesisErrorEvent;
+      if (error.error === "interrupted" || error.error === "canceled") {
+        return;
+      }
+      console.warn("Speech synthesis error:", error.error);
       currentUtterance = null;
       onEndCallback = null;
+      // Still call onEnd so the app can continue
+      onEnd?.();
     };
 
     currentUtterance = utterance;
