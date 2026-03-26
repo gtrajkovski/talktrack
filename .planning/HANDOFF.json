@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-26T18:00:00.000Z",
+  "timestamp": "2026-03-26T19:30:00.000Z",
   "phase": "1",
   "phase_name": "mvp-complete",
   "phase_dir": ".planning",
@@ -9,30 +9,34 @@
   "total_tasks": 0,
   "status": "complete",
   "completed_tasks": [
-    {"id": 1, "name": "Step 1: Project setup (create-next-app, deps)", "status": "done"},
-    {"id": 2, "name": "Step 2: Types & Data Layer (IndexedDB, Zustand)", "status": "done"},
-    {"id": 3, "name": "Step 3: UI Primitives (Button, Card, etc.)", "status": "done"},
-    {"id": 4, "name": "Step 4: Layout Shell (AppShell, Header, BottomNav)", "status": "done"},
-    {"id": 5, "name": "Step 5: Import Flow (paste-to-rehearse)", "status": "done"},
-    {"id": 6, "name": "Step 6: Home Screen (talk list, detail page)", "status": "done"},
-    {"id": 7, "name": "Step 7: Speech Synthesis (TTS wrapper)", "status": "done"},
-    {"id": 8, "name": "Step 8: Listen Mode (auto-play slides)", "status": "done"},
-    {"id": 9, "name": "Step 9: Prompt Mode (title + reveal)", "status": "done"},
-    {"id": 10, "name": "Step 10: Test Mode (full recall)", "status": "done"},
-    {"id": 11, "name": "Step 11: Settings page", "status": "done"},
-    {"id": 12, "name": "Step 12: Stats page (basic)", "status": "done"},
-    {"id": 13, "name": "Step 13: Text & Markdown parsers", "status": "done"},
-    {"id": 14, "name": "Step 14: PPTX & DOCX parsers", "status": "done"},
-    {"id": 15, "name": "Step 15: Scoring modules (similarity, filler, pacing)", "status": "done"}
+    {"id": 1, "name": "Project setup (Next.js 14, TypeScript, Tailwind)", "status": "done"},
+    {"id": 2, "name": "Types & Data Layer (IndexedDB, Zustand)", "status": "done"},
+    {"id": 3, "name": "UI Primitives (Button, Card, Badge, etc.)", "status": "done"},
+    {"id": 4, "name": "Layout Shell (AppShell, Header, BottomNav)", "status": "done"},
+    {"id": 5, "name": "Import Flow (paste text, file upload)", "status": "done"},
+    {"id": 6, "name": "Home Screen (talk list, detail page)", "status": "done"},
+    {"id": 7, "name": "Speech Synthesis (TTS with sentence chunking)", "status": "done"},
+    {"id": 8, "name": "Listen Mode (auto-play slides)", "status": "done"},
+    {"id": 9, "name": "Prompt Mode (title + reveal, voice commands)", "status": "done"},
+    {"id": 10, "name": "Test Mode (full recall, voice commands)", "status": "done"},
+    {"id": 11, "name": "Settings page (voice selector, rate, toggles)", "status": "done"},
+    {"id": 12, "name": "Stats page", "status": "done"},
+    {"id": 13, "name": "Text & Markdown parsers", "status": "done"},
+    {"id": 14, "name": "PPTX & DOCX parsers", "status": "done"},
+    {"id": 15, "name": "Scoring modules (similarity, filler words, pacing)", "status": "done"},
+    {"id": 16, "name": "PWA support (next-pwa)", "status": "done"},
+    {"id": 17, "name": "Better voice selector UI", "status": "done"},
+    {"id": 18, "name": "Transcription scoring display", "status": "done"},
+    {"id": 19, "name": "Voice recognition auto-restart fix", "status": "done"}
   ],
   "remaining_tasks": [],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Voice commands are the PRIMARY interaction", "rationale": "User wants fully hands-free — say 'reveal' to hear notes, say 'next' to advance. Tap buttons are fallback only.", "phase": "0"},
-    {"decision": "All 15 CLAUDE.md steps completed", "rationale": "MVP is functional: paste or upload content, rehearse in 3 modes, voice commands work.", "phase": "1"}
+    {"decision": "Voice commands are PRIMARY interaction", "rationale": "User wants fully hands-free — say 'next', 'reveal', 'help'. Tap buttons are fallback.", "phase": "0"},
+    {"decision": "All 15 CLAUDE.md steps + enhancements complete", "rationale": "MVP functional with PWA, better voice UI, transcript scoring.", "phase": "1"}
   ],
   "uncommitted_files": [],
-  "next_action": "Test the app: npm run dev, then try importing a talk and rehearsing. Consider PWA setup, more polish, or deploy to Vercel.",
-  "context_notes": "MVP complete. App has: paste/upload import, 3 rehearsal modes (Listen/Prompt/Test), voice commands (next, back, repeat, reveal, help), settings, stats. Ready for testing and deployment."
+  "next_action": "Deploy to Vercel or continue testing. App is fully functional.",
+  "context_notes": "TalkTrack MVP complete. 60+ source files. Voice-first rehearsal with 3 modes (Listen/Prompt/Test). Import via paste or file upload (.pptx, .docx). Real-time transcript scoring. PWA ready. Pushed to GitHub: gtrajkovski/talktrack"
 }
