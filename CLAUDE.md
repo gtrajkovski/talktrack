@@ -181,7 +181,7 @@ interface UserSettings {
   autoAdvance: boolean;          // default true
   autoAdvanceDelay: number;      // seconds (default 1)
   showWordCount: boolean;
-  enableVoiceCommands: boolean;
+  enableVoiceCommands: boolean;  // default TRUE — voice is primary input
   theme: "dark" | "light";      // default dark
   wordsPerMinute: number;        // default 100
 }
@@ -279,37 +279,54 @@ All: Tailwind, dark theme default, min 48px touch targets.
 
 `app/talk/[id]/rehearse/page.tsx`:
 
+**CRITICAL DESIGN PRINCIPLE**: The app is ALWAYS LISTENING during Prompt and Test modes via speech recognition. Voice commands are the PRIMARY interaction — tap buttons are just a fallback. The user should be able to complete an entire rehearsal session without touching the screen. Speech recognition must start automatically when it's the user's turn and stay active until the mode changes.
+
 1. `components/rehearsal/SlideHeader.tsx` — "Slide 3 of 12", large title
-2. `components/rehearsal/VoiceStatus.tsx` — badge: "Playing...", "Paused", "Your turn"
+2. `components/rehearsal/VoiceStatus.tsx` — badge: "Playing...", "Paused", "Your turn — listening..."
 3. Giant ProgressBar at top
 4. `components/rehearsal/ListenMode.tsx`:
    - Auto-play: TTS reads current slide's notes
    - On complete: chime, wait autoAdvanceDelay, advance
-   - Controls row (equal-width, min 52px): Back / Repeat / Next
+   - Controls row (equal-width, min 52px): Back / Repeat / Next (tap fallback)
+   - Voice commands active: say "next", "repeat", "go back" — no tap needed
    - Session start sound on mount, complete sound on last slide
-5. `components/rehearsal/RehearsalControls.tsx` — shared control bar
+5. `components/rehearsal/RehearsalControls.tsx` — shared control bar (tap fallback)
 6. `components/rehearsal/CompletionScreen.tsx` — "Rehearsal Complete!" + stats
 7. Wire rehearsalStore: currentSlideIndex, mode, isPlaying, sessionData
 
-**Must have**: 60px primary buttons, 52px secondary, 200ms fade transitions, dark theme, huge tap targets.
+**Must have**: 60px primary buttons, 52px secondary, 200ms fade transitions, dark theme, huge tap targets. Voice commands always active — buttons are fallback only.
 
-### Step 9: Prompt Mode
+### Step 9: Prompt Mode (VOICE-FIRST)
 
 `components/rehearsal/PromptMode.tsx`:
 1. TTS reads slide title only, then pauses
-2. VoiceStatus: "Your turn — speak from memory"
-3. "Reveal Answer" big button → TTS reads full notes
-4. After reveal: Back / Repeat / Next
-5. Track `usedHelp: true` if they tapped Reveal
+2. Speech recognition starts AUTOMATICALLY — app is now listening
+3. VoiceStatus: "Your turn — listening..."
+4. User speaks from memory. The app records what they say.
+5. User says **"reveal"** (or "show me", "tell me") → TTS reads the full notes aloud
+6. User says **"next"** → advances to next slide
+7. User says **"repeat"** → re-reads the title
+8. User says **"go back"** → previous slide
+9. Tap buttons exist as fallback only ("Reveal Answer", Back/Repeat/Next)
+10. Track `usedHelp: true` if they said "reveal" or tapped Reveal
 
-### Step 10: Test Mode
+**The key insight**: after TTS finishes reading the title, the mic is ON. The user just talks. They never need to touch the phone. When they're done reciting, they say "next" to move on, or "reveal" if they're stuck.
+
+### Step 10: Test Mode (VOICE-FIRST)
 
 `components/rehearsal/TestMode.tsx`:
 1. TTS reads "Slide [N]: [title]" only
-2. VoiceStatus: "Your turn"
-3. "Need Help" → reveals and reads notes (usedHelp: true)
-4. "Got It — Next" → advances
-5. Back / Repeat Title controls
+2. Speech recognition starts AUTOMATICALLY — app is listening
+3. VoiceStatus: "Your turn — listening..."
+4. User recites everything from memory. App records it.
+5. User says **"help"** or **"need help"** → TTS reads notes aloud (usedHelp: true)
+6. User says **"next"** or **"got it"** → advances to next slide
+7. User says **"repeat"** → re-reads slide number and title
+8. User says **"go back"** → previous slide
+9. Tap buttons exist as fallback only
+10. Scoring happens automatically: compare what they said vs. original notes
+
+**iOS caveat**: Recognition and synthesis cannot run simultaneously. When TTS is speaking (reading notes after "reveal"/"help"), pause recognition. Resume it automatically when TTS finishes.
 
 ### Step 11: Settings
 
