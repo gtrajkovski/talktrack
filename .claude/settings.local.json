@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(gsd:resume-work)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 30 npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: MVP build — paste-to-rehearse with 3 voice-first modes\n\nSteps 1-11 of CLAUDE.md spec complete:\n- Next.js 14 with App Router, TypeScript, Tailwind\n- Design system with dark theme, 60px touch targets\n- IndexedDB via idb for local storage\n- Zustand stores for talks, settings, rehearsal state\n- Import flow: paste text to create slides\n- Home screen with talk list\n- Talk detail with mode selection\n- Speech synthesis with sentence chunking\n- Three rehearsal modes:\n  - Listen: TTS reads notes, auto-advance\n  - Prompt: hear title, recite from memory, say \"reveal\"\n  - Test: slide number only, say \"help\" if stuck\n- Voice commands primary interaction \\(next, back, repeat, reveal, help\\)\n- Settings: voice, rate, auto-advance, voice commands toggle\n- Chime sounds for transitions and completion\n\nVoice-first design: user can complete entire rehearsal hands-free.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
+    ]
+  }
+}

@@ -5,3 +5,4 @@ export { CompletionScreen } from "./CompletionScreen";
 export { ListenMode } from "./ListenMode";
 export { PromptMode } from "./PromptMode";
 export { TestMode } from "./TestMode";
+export { TranscriptScore } from "./TranscriptScore";

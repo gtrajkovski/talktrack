@@ -1,74 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { VoiceSelector } from "@/components/settings";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { getAvailableVoices, type VoiceOption } from "@/lib/speech/voices";
 
 export default function SettingsPage() {
   const settings = useSettingsStore();
-  const [voices, setVoices] = useState<VoiceOption[]>([]);
-
-  useEffect(() => {
-    getAvailableVoices().then(setVoices);
-  }, []);
 
   return (
     <AppShell>
       <Header title="Settings" />
 
       <div className="px-4 py-4 space-y-4">
-        {/* Voice Settings */}
+        {/* Voice Selection */}
         <Card>
-          <h2 className="font-bold mb-4">Voice</h2>
+          <VoiceSelector />
+        </Card>
 
-          <div className="space-y-4">
-            {/* Voice Selection */}
-            <div>
-              <label className="block text-sm text-text-dim mb-2">
-                Voice
-              </label>
-              <select
-                value={settings.voiceName}
-                onChange={(e) => settings.updateSettings({ voiceName: e.target.value })}
-                className="w-full bg-surface-light text-text rounded-[var(--radius-sm)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent"
-              >
-                <option value="">System Default</option>
-                {voices.map((voice) => (
-                  <option key={voice.name} value={voice.name}>
-                    {voice.name} {voice.isLocal ? "(Local)" : ""}
-                  </option>
-                ))}
-              </select>
+        {/* Speech Rate */}
+        <Card>
+          <h3 className="font-bold mb-4">Speech Rate</h3>
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-text-dim">Speed</span>
+              <span className="font-medium">{settings.speechRate.toFixed(2)}x</span>
             </div>
-
-            {/* Speech Rate */}
-            <div>
-              <label className="block text-sm text-text-dim mb-2">
-                Speech Rate: {settings.speechRate.toFixed(2)}x
-              </label>
-              <input
-                type="range"
-                min="0.7"
-                max="1.3"
-                step="0.05"
-                value={settings.speechRate}
-                onChange={(e) => settings.updateSettings({ speechRate: parseFloat(e.target.value) })}
-                className="w-full accent-accent"
-              />
-              <div className="flex justify-between text-xs text-text-dim mt-1">
-                <span>Slower</span>
-                <span>Faster</span>
-              </div>
+            <input
+              type="range"
+              min="0.7"
+              max="1.3"
+              step="0.05"
+              value={settings.speechRate}
+              onChange={(e) => settings.updateSettings({ speechRate: parseFloat(e.target.value) })}
+              className="w-full accent-accent h-2"
+            />
+            <div className="flex justify-between text-xs text-text-dim mt-1">
+              <span>Slower</span>
+              <span>Normal</span>
+              <span>Faster</span>
             </div>
           </div>
         </Card>
 
         {/* Rehearsal Settings */}
         <Card>
-          <h2 className="font-bold mb-4">Rehearsal</h2>
+          <h3 className="font-bold mb-4">Rehearsal</h3>
 
           <div className="space-y-4">
             {/* Voice Commands */}
@@ -76,20 +54,20 @@ export default function SettingsPage() {
               <div>
                 <div className="font-medium">Voice Commands</div>
                 <div className="text-sm text-text-dim">
-                  Say &quot;next&quot;, &quot;reveal&quot;, etc.
+                  Say &quot;next&quot;, &quot;reveal&quot;, &quot;help&quot;
                 </div>
               </div>
               <button
                 onClick={() => settings.updateSettings({ enableVoiceCommands: !settings.enableVoiceCommands })}
                 className={`
-                  w-14 h-8 rounded-full transition-colors
+                  w-14 h-8 rounded-full transition-colors relative
                   ${settings.enableVoiceCommands ? "bg-accent" : "bg-surface-light"}
                 `}
               >
                 <div
                   className={`
-                    w-6 h-6 rounded-full bg-white shadow transition-transform
-                    ${settings.enableVoiceCommands ? "translate-x-7" : "translate-x-1"}
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableVoiceCommands ? "left-7" : "left-1"}
                   `}
                 />
               </button>
@@ -106,14 +84,14 @@ export default function SettingsPage() {
               <button
                 onClick={() => settings.updateSettings({ autoAdvance: !settings.autoAdvance })}
                 className={`
-                  w-14 h-8 rounded-full transition-colors
+                  w-14 h-8 rounded-full transition-colors relative
                   ${settings.autoAdvance ? "bg-accent" : "bg-surface-light"}
                 `}
               >
                 <div
                   className={`
-                    w-6 h-6 rounded-full bg-white shadow transition-transform
-                    ${settings.autoAdvance ? "translate-x-7" : "translate-x-1"}
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.autoAdvance ? "left-7" : "left-1"}
                   `}
                 />
               </button>
@@ -121,10 +99,11 @@ export default function SettingsPage() {
 
             {/* Auto Advance Delay */}
             {settings.autoAdvance && (
-              <div>
-                <label className="block text-sm text-text-dim mb-2">
-                  Delay before advancing: {settings.autoAdvanceDelay}s
-                </label>
+              <div className="pl-4 border-l-2 border-surface-light">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-text-dim">Delay</span>
+                  <span className="font-medium">{settings.autoAdvanceDelay}s</span>
+                </div>
                 <input
                   type="range"
                   min="0"
@@ -132,29 +111,34 @@ export default function SettingsPage() {
                   step="0.5"
                   value={settings.autoAdvanceDelay}
                   onChange={(e) => settings.updateSettings({ autoAdvanceDelay: parseFloat(e.target.value) })}
-                  className="w-full accent-accent"
+                  className="w-full accent-accent h-2"
                 />
               </div>
             )}
+          </div>
+        </Card>
 
-            {/* Words Per Minute */}
-            <div>
-              <label className="block text-sm text-text-dim mb-2">
-                Reading pace: {settings.wordsPerMinute} words/min
-              </label>
-              <input
-                type="range"
-                min="80"
-                max="150"
-                step="5"
-                value={settings.wordsPerMinute}
-                onChange={(e) => settings.updateSettings({ wordsPerMinute: parseInt(e.target.value) })}
-                className="w-full accent-accent"
-              />
-              <div className="flex justify-between text-xs text-text-dim mt-1">
-                <span>Slower</span>
-                <span>Faster</span>
-              </div>
+        {/* Reading Pace */}
+        <Card>
+          <h3 className="font-bold mb-4">Time Estimates</h3>
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-text-dim">Reading pace</span>
+              <span className="font-medium">{settings.wordsPerMinute} words/min</span>
+            </div>
+            <input
+              type="range"
+              min="80"
+              max="150"
+              step="5"
+              value={settings.wordsPerMinute}
+              onChange={(e) => settings.updateSettings({ wordsPerMinute: parseInt(e.target.value) })}
+              className="w-full accent-accent h-2"
+            />
+            <div className="flex justify-between text-xs text-text-dim mt-1">
+              <span>Careful</span>
+              <span>Natural</span>
+              <span>Quick</span>
             </div>
           </div>
         </Card>
@@ -163,6 +147,15 @@ export default function SettingsPage() {
         <Button variant="danger" onClick={settings.resetSettings}>
           Reset to Defaults
         </Button>
+
+        {/* App Info */}
+        <Card padding="sm">
+          <div className="text-center text-sm text-text-dim">
+            <div className="font-bold text-text mb-1">TalkTrack</div>
+            <div>Voice-first rehearsal coach</div>
+            <div className="mt-2 text-xs">v1.0.0</div>
+          </div>
+        </Card>
       </div>
     </AppShell>
   );

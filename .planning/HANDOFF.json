@@ -1,32 +1,38 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-26T17:10:56.726Z",
-  "phase": "0",
-  "phase_name": "project-setup",
+  "timestamp": "2026-03-26T18:00:00.000Z",
+  "phase": "1",
+  "phase_name": "mvp-complete",
   "phase_dir": ".planning",
   "plan": 0,
   "task": 0,
   "total_tasks": 0,
-  "status": "paused",
+  "status": "complete",
   "completed_tasks": [
-    {"id": 1, "name": "Create PROJECT.md for GSD launcher detection", "status": "done"},
-    {"id": 2, "name": "Create CLAUDE.md with full 15-step build spec", "status": "done"},
-    {"id": 3, "name": "Create .planning/ directory for GSD detection", "status": "done"},
-    {"id": 4, "name": "Update GSD Launcher searchDirs to include C:\\Users\\gpt30\\Projects", "status": "done"},
-    {"id": 5, "name": "Create GitHub repo and push (gtrajkovski/talktrack)", "status": "done"},
-    {"id": 6, "name": "Update spec: voice commands are primary interaction, always listening in Prompt/Test modes", "status": "done"}
+    {"id": 1, "name": "Step 1: Project setup (create-next-app, deps)", "status": "done"},
+    {"id": 2, "name": "Step 2: Types & Data Layer (IndexedDB, Zustand)", "status": "done"},
+    {"id": 3, "name": "Step 3: UI Primitives (Button, Card, etc.)", "status": "done"},
+    {"id": 4, "name": "Step 4: Layout Shell (AppShell, Header, BottomNav)", "status": "done"},
+    {"id": 5, "name": "Step 5: Import Flow (paste-to-rehearse)", "status": "done"},
+    {"id": 6, "name": "Step 6: Home Screen (talk list, detail page)", "status": "done"},
+    {"id": 7, "name": "Step 7: Speech Synthesis (TTS wrapper)", "status": "done"},
+    {"id": 8, "name": "Step 8: Listen Mode (auto-play slides)", "status": "done"},
+    {"id": 9, "name": "Step 9: Prompt Mode (title + reveal)", "status": "done"},
+    {"id": 10, "name": "Step 10: Test Mode (full recall)", "status": "done"},
+    {"id": 11, "name": "Step 11: Settings page", "status": "done"},
+    {"id": 12, "name": "Step 12: Stats page (basic)", "status": "done"},
+    {"id": 13, "name": "Step 13: Text & Markdown parsers", "status": "done"},
+    {"id": 14, "name": "Step 14: PPTX & DOCX parsers", "status": "done"},
+    {"id": 15, "name": "Step 15: Scoring modules (similarity, filler, pacing)", "status": "done"}
   ],
-  "remaining_tasks": [
-    {"id": 7, "name": "Run Step 1: create-next-app + install deps", "status": "not_started"},
-    {"id": 8, "name": "Build Steps 2-15 per CLAUDE.md spec", "status": "not_started"}
-  ],
+  "remaining_tasks": [],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Voice commands are the PRIMARY interaction, not opt-in", "rationale": "User wants fully hands-free — say 'reveal' to hear notes, say 'next' to advance. Tap buttons are fallback only.", "phase": "0"},
-    {"decision": "Project lives at C:\\Users\\gpt30\\Projects\\talktrack", "rationale": "User requested Projects folder. Added Projects dir to GSD launcher searchDirs.", "phase": "0"}
+    {"decision": "Voice commands are the PRIMARY interaction", "rationale": "User wants fully hands-free — say 'reveal' to hear notes, say 'next' to advance. Tap buttons are fallback only.", "phase": "0"},
+    {"decision": "All 15 CLAUDE.md steps completed", "rationale": "MVP is functional: paste or upload content, rehearse in 3 modes, voice commands work.", "phase": "1"}
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd:new-project or start building with Step 1 from CLAUDE.md: npx create-next-app + npm install deps",
-  "context_notes": "Project spec is complete and pushed to GitHub. No code written yet — just the CLAUDE.md build prompt and PROJECT.md. Ready to start actual development. The CLAUDE.md has 15 sequential build steps covering everything from project setup through speech recognition."
+  "next_action": "Test the app: npm run dev, then try importing a talk and rehearsing. Consider PWA setup, more polish, or deploy to Vercel.",
+  "context_notes": "MVP complete. App has: paste/upload import, 3 rehearsal modes (Listen/Prompt/Test), voice commands (next, back, repeat, reveal, help), settings, stats. Ready for testing and deployment."
 }

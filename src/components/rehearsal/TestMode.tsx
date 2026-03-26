@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { SlideHeader } from "./SlideHeader";
 import { VoiceStatus } from "./VoiceStatus";
 import { RehearsalControls } from "./RehearsalControls";
+import { TranscriptScore } from "./TranscriptScore";
 import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
 import { slideTransition } from "@/lib/audio/chime";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -39,6 +40,7 @@ export function TestMode({
   const { speechRate, voiceName, enableVoiceCommands } = useSettingsStore();
   const [status, setStatus] = useState<"playing" | "listening" | "idle">("idle");
   const [helpUsed, setHelpUsed] = useState(false);
+  const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const currentSlide = slides[currentIndex];
@@ -47,13 +49,13 @@ export function TestMode({
   const progress = ((currentIndex + 1) / slides.length) * 100;
 
   // Check for voice commands in transcript
-  const checkCommand = useCallback((transcript: string): string | null => {
-    const words = transcript.toLowerCase().split(/\s+/).slice(-5);
-    const text = words.join(" ");
+  const checkCommand = useCallback((text: string): string | null => {
+    const words = text.toLowerCase().split(/\s+/).slice(-5);
+    const phrase = words.join(" ");
 
     for (const [command, phrases] of Object.entries(COMMANDS)) {
-      for (const phrase of phrases) {
-        if (text.includes(phrase)) {
+      for (const p of phrases) {
+        if (phrase.includes(p)) {
           return command;
         }
       }
@@ -78,10 +80,15 @@ export function TestMode({
       recognition.lang = "en-US";
 
       recognition.onresult = (event) => {
-        const last = event.results[event.results.length - 1];
-        const transcript = last[0].transcript;
+        // Build full transcript from all results
+        let fullTranscript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          fullTranscript += event.results[i][0].transcript;
+        }
+        setTranscript(fullTranscript);
 
-        const command = checkCommand(transcript);
+        const last = event.results[event.results.length - 1];
+        const command = checkCommand(last[0].transcript);
         if (command && last.isFinal) {
           recognition.stop();
 
@@ -138,6 +145,7 @@ export function TestMode({
   // Speak the slide number and title, then start listening
   const speakPrompt = useCallback(() => {
     setHelpUsed(false);
+    setTranscript("");
     stopListening();
     setStatus("playing");
 
@@ -213,7 +221,7 @@ export function TestMode({
       <VoiceStatus status={status} />
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col justify-center mb-6">
+      <div className="flex-1 overflow-y-auto mb-6">
         {helpUsed ? (
           <div className="bg-surface rounded-[var(--radius)] p-4">
             <div className="text-xs text-text-dim uppercase tracking-wide mb-2">
@@ -233,6 +241,15 @@ export function TestMode({
               Need Help
             </Button>
           </div>
+        )}
+
+        {/* Show transcript and score - always show score in test mode */}
+        {transcript && (
+          <TranscriptScore
+            transcript={transcript}
+            originalNotes={currentSlide.notes}
+            showScore={true}
+          />
         )}
       </div>
 
