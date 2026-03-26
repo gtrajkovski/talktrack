@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  /* TalkTrack Design System */
+  --bg: #0f1729;
+  --surface: #1a2744;
+  --surface-light: #243352;
+  --accent: #f59e0b;
+  --accent-dim: #b45309;
+  --blue: #3b82f6;
+  --text: #f1f5f9;
+  --text-dim: #94a3b8;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --radius: 16px;
+  --radius-sm: 12px;
+}
+
+@theme inline {
+  /* Colors */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-light: var(--surface-light);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-blue: var(--blue);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  /* Font */
+  --font-sans: var(--font-outfit);
+
+  /* Radius */
+  --radius-default: var(--radius);
+  --radius-sm: var(--radius-sm);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Touch target minimum */
+button, a, [role="button"] {
+  min-height: 48px;
+}
+
+/* Button press animation */
+button:active, [role="button"]:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease;
+}
+
+/* Progress bar animation */
+.progress-bar {
+  transition: width 400ms ease;
+}
+
+/* Fade transitions */
+.fade-enter {
+  opacity: 0;
+}
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+.fade-exit {
+  opacity: 1;
+}
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+/* Modal slide-up animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 200ms ease-out;
+}
