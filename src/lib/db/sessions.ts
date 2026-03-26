@@ -33,3 +33,27 @@ export async function deleteSession(id: string): Promise<void> {
   const db = await getDB();
   await db.delete("sessions", id);
 }
+
+/**
+ * Get incomplete sessions (no completedAt) for resume functionality.
+ * Returns most recent first.
+ */
+export async function getIncompleteSessions(): Promise<RehearsalSession[]> {
+  const db = await getDB();
+  const sessions = await db.getAll("sessions");
+  return sessions
+    .filter((s) => !s.completedAt)
+    .sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/**
+ * Mark a session as paused (for resume tracking).
+ */
+export async function pauseSession(id: string): Promise<void> {
+  const db = await getDB();
+  const session = await db.get("sessions", id);
+  if (session) {
+    session.pausedAt = Date.now();
+    await db.put("sessions", session);
+  }
+}

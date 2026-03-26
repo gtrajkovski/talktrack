@@ -6,6 +6,8 @@ export interface RehearsalSession {
   mode: RehearsalMode;
   startedAt: number;
   completedAt?: number;
+  pausedAt?: number;           // When session was interrupted/paused
+  currentSlideIndex: number;   // For resume support
   slidesCompleted: number;
   totalSlides: number;
   attempts: SlideAttempt[];

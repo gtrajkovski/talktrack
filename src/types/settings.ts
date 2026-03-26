@@ -7,6 +7,7 @@ export interface UserSettings {
   enableVoiceCommands: boolean;
   theme: "dark" | "light";
   wordsPerMinute: number;
+  hasSeenOnboarding: boolean;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -18,4 +19,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   enableVoiceCommands: true,
   theme: "dark",
   wordsPerMinute: 100,
+  hasSeenOnboarding: false,
 };

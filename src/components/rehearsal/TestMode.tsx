@@ -7,7 +7,7 @@ import { SlideHeader } from "./SlideHeader";
 import { VoiceStatus } from "./VoiceStatus";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
-import { speak, stop } from "@/lib/speech/synthesis";
+import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
 import { slideTransition } from "@/lib/audio/chime";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { Slide } from "@/types/talk";
@@ -21,12 +21,16 @@ interface TestModeProps {
   onUsedHelp: () => void;
 }
 
+// Voice command keywords - use exact word matching to avoid false positives
 const COMMANDS = {
   next: ["next", "next slide", "forward", "continue", "skip", "move on", "got it"],
   back: ["back", "previous", "go back", "last slide", "before"],
   repeat: ["repeat", "again", "say that again", "one more time", "replay"],
   help: ["help", "hint", "i need help", "stuck", "i don't know"],
 };
+
+// Detect iOS for speech overlap workaround
+const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 export function TestMode({
   slides,
@@ -37,23 +41,36 @@ export function TestMode({
   onUsedHelp,
 }: TestModeProps) {
   const { speechRate, voiceName } = useSettingsStore();
-  const [status, setStatus] = useState<"playing" | "listening" | "idle">("idle");
+  const [status, setStatus] = useState<"playing" | "listening" | "idle" | "error">("idle");
   const [helpUsed, setHelpUsed] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const lastCommandTimeRef = useRef(0);
+  const errorRetryCountRef = useRef(0);
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
   const progress = ((currentIndex + 1) / slides.length) * 100;
 
+  // Check for voice commands - use word boundary matching to avoid false positives
   const checkCommand = useCallback((text: string): string | null => {
-    const words = text.toLowerCase().split(/\s+/).slice(-5);
+    // Debounce: ignore commands within 500ms of last command
+    const now = Date.now();
+    if (now - lastCommandTimeRef.current < 500) return null;
+
+    const words = text.toLowerCase().trim().split(/\s+/).slice(-5);
     const phrase = words.join(" ");
+
     for (const [command, phrases] of Object.entries(COMMANDS)) {
       for (const p of phrases) {
-        if (phrase.includes(p)) return command;
+        // Use word boundary matching: phrase must end with the command phrase
+        if (phrase === p || phrase.endsWith(" " + p)) {
+          lastCommandTimeRef.current = now;
+          return command;
+        }
       }
     }
     return null;
@@ -72,10 +89,22 @@ export function TestMode({
   const handleRepeatRef = useRef<() => void>(() => {});
   const handleHelpRef = useRef<() => void>(() => {});
 
+  // Start speech recognition with error recovery
   const startListening = useCallback(() => {
     if (typeof window === "undefined") return;
+    if (!isMountedRef.current) return;
+
+    // iOS: Don't start listening if TTS is still speaking
+    if (isIOS && isSpeaking()) {
+      setTimeout(() => startListening(), 100);
+      return;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      setStatus("idle");
+      return;
+    }
 
     stopListening();
 
@@ -86,6 +115,9 @@ export function TestMode({
       recognition.lang = "en-US";
 
       recognition.onresult = (event) => {
+        if (!isMountedRef.current) return;
+        errorRetryCountRef.current = 0; // Reset error count on successful result
+
         let fullTranscript = "";
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript;
@@ -107,23 +139,55 @@ export function TestMode({
       };
 
       recognition.onend = () => {
-        if (isListeningRef.current) {
-          try { recognition.start(); } catch {}
+        // Auto-restart if we should still be listening and component is mounted
+        if (isListeningRef.current && isMountedRef.current) {
+          // iOS: Check TTS isn't speaking before restarting
+          if (isIOS && isSpeaking()) {
+            setTimeout(() => {
+              if (isListeningRef.current && isMountedRef.current) {
+                try { recognition.start(); } catch { /* ignore */ }
+              }
+            }, 100);
+            return;
+          }
+          try { recognition.start(); } catch { /* ignore */ }
         }
       };
 
       recognition.onerror = (e) => {
-        if (e.error !== "aborted" && e.error !== "no-speech") {
-          console.warn("Speech recognition error:", e.error);
+        if (!isMountedRef.current) return;
+
+        // Ignore expected errors
+        if (e.error === "aborted" || e.error === "no-speech") return;
+
+        console.warn("Speech recognition error:", e.error);
+
+        // Handle network/service errors with recovery
+        if (e.error === "network" || e.error === "service-not-allowed") {
+          errorRetryCountRef.current++;
+
+          if (errorRetryCountRef.current <= 3) {
+            setStatus("error");
+            setTimeout(() => {
+              if (isMountedRef.current && isListeningRef.current) {
+                setStatus("listening");
+                startListening();
+              }
+            }, 2000);
+          } else {
+            setStatus("error");
+          }
         }
       };
 
       recognition.start();
       recognitionRef.current = recognition;
       isListeningRef.current = true;
+      errorRetryCountRef.current = 0;
       setStatus("listening");
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
+      setStatus("error");
     }
   }, [checkCommand, stopListening]);
 
@@ -168,6 +232,15 @@ export function TestMode({
   handleRepeatRef.current = handleRepeat;
   handleHelpRef.current = handleHelp;
 
+  // Track mounted state for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Initial prompt speak on slide change
   useEffect(() => {
     speakPrompt();
     return () => { stop(); stopListening(); };

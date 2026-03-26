@@ -3,6 +3,44 @@ type SpeechCallback = () => void;
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 let onEndCallback: SpeechCallback | null = null;
 
+// Common abbreviations that shouldn't trigger sentence breaks
+const ABBREVIATIONS = /(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|Inc|Ltd|Corp|vs|etc|e\.g|i\.e|al|St|Rd|Ave|Blvd|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.$/i;
+
+/**
+ * Split text into sentences for TTS, avoiding breaks on abbreviations.
+ * Handles: "Dr. Smith said hello. He was happy." -> ["Dr. Smith said hello.", "He was happy."]
+ */
+function splitIntoSentences(text: string): string[] {
+  if (!text.trim()) return [text];
+
+  const sentences: string[] = [];
+  let current = "";
+
+  // Split on sentence-ending punctuation followed by space
+  const parts = text.split(/([.!?]+\s+)/);
+
+  for (let i = 0; i < parts.length; i++) {
+    current += parts[i];
+
+    // Check if this part ends with sentence-ending punctuation + space
+    if (/[.!?]+\s+$/.test(parts[i])) {
+      // Check if previous content ends with an abbreviation
+      const contentBeforePunc = current.replace(/[.!?]+\s+$/, "");
+      if (!ABBREVIATIONS.test(contentBeforePunc)) {
+        sentences.push(current.trim());
+        current = "";
+      }
+    }
+  }
+
+  // Add any remaining text
+  if (current.trim()) {
+    sentences.push(current.trim());
+  }
+
+  return sentences.length > 0 ? sentences : [text];
+}
+
 export function getVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined") return [];
   return speechSynthesis.getVoices();
@@ -43,7 +81,8 @@ export function speak(
   const { rate = 0.95, voiceName, onEnd } = options;
 
   // Break long text into sentences to avoid Chrome Android bug
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  // Use smarter splitting that avoids breaking on abbreviations (Dr., Mr., etc.)
+  const sentences = splitIntoSentences(text);
 
   let sentenceIndex = 0;
 

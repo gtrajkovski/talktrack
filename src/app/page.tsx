@@ -1,19 +1,90 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { ResumePrompt } from "@/components/home";
+import { FirstRunModal } from "@/components/onboarding";
 import { useTalksStore } from "@/stores/talksStore";
+import { useRehearsalStore } from "@/stores/rehearsalStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
+import { getIncompleteSessions, deleteSession } from "@/lib/db/sessions";
+import { createDemoTalk } from "@/lib/data/demoTalk";
+import type { RehearsalSession } from "@/types/session";
+import type { Talk } from "@/types/talk";
 
 export default function HomePage() {
-  const { talks, isLoading, loadTalks } = useTalksStore();
+  const router = useRouter();
+  const { talks, isLoading, loadTalks, getTalk, addTalk } = useTalksStore();
+  const { resumeSession } = useRehearsalStore();
+  const { hasSeenOnboarding, updateSettings, wordsPerMinute } = useSettingsStore();
+
+  const [incompleteSession, setIncompleteSession] =
+    useState<RehearsalSession | null>(null);
+  const [incompleteTalk, setIncompleteTalk] = useState<Talk | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
+
+  // Show onboarding modal for first-time users
+  useEffect(() => {
+    if (!isLoading && !hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [isLoading, hasSeenOnboarding]);
+
+  const handleCloseOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    updateSettings({ hasSeenOnboarding: true });
+  }, [updateSettings]);
+
+  const handleTryDemo = useCallback(async () => {
+    const demoTalk = createDemoTalk(wordsPerMinute);
+    await addTalk(demoTalk);
+    router.push(`/talk/${demoTalk.id}`);
+  }, [addTalk, router, wordsPerMinute]);
+
+  // Check for incomplete sessions
+  useEffect(() => {
+    async function checkIncomplete() {
+      const sessions = await getIncompleteSessions();
+      if (sessions.length > 0) {
+        const session = sessions[0];
+        const talk = getTalk(session.talkId);
+        if (talk) {
+          setIncompleteSession(session);
+          setIncompleteTalk(talk);
+        } else {
+          // Talk was deleted, clean up orphan session
+          await deleteSession(session.id);
+        }
+      }
+    }
+    if (!isLoading && talks.length > 0) {
+      checkIncomplete();
+    }
+  }, [isLoading, talks, getTalk]);
+
+  const handleResume = useCallback(async () => {
+    if (incompleteSession && incompleteTalk) {
+      await resumeSession(incompleteSession, incompleteTalk);
+      router.push(`/talk/${incompleteTalk.id}/rehearse?mode=${incompleteSession.mode}`);
+    }
+  }, [incompleteSession, incompleteTalk, resumeSession, router]);
+
+  const handleDiscard = useCallback(async () => {
+    if (incompleteSession) {
+      await deleteSession(incompleteSession.id);
+      setIncompleteSession(null);
+      setIncompleteTalk(null);
+    }
+  }, [incompleteSession]);
 
   const getTotalTime = (slides: { estimatedSeconds: number }[]) => {
     return slides.reduce((sum, s) => sum + s.estimatedSeconds, 0);
@@ -24,6 +95,16 @@ export default function HomePage() {
       <Header title="TalkTrack" />
 
       <div className="px-4 py-4 space-y-4">
+        {/* Resume Prompt */}
+        {incompleteSession && incompleteTalk && (
+          <ResumePrompt
+            session={incompleteSession}
+            talk={incompleteTalk}
+            onResume={handleResume}
+            onDiscard={handleDiscard}
+          />
+        )}
+
         {isLoading ? (
           <div className="text-center py-12 text-text-dim">Loading...</div>
         ) : talks.length === 0 ? (
@@ -32,9 +113,14 @@ export default function HomePage() {
             <p className="text-text-dim mb-6">
               Import your first presentation to start rehearsing.
             </p>
-            <Link href="/import">
-              <Button>Import Talk</Button>
-            </Link>
+            <div className="space-y-3">
+              <Link href="/import">
+                <Button>Import Talk</Button>
+              </Link>
+              <Button onClick={handleTryDemo} variant="secondary">
+                Try Demo Talk
+              </Button>
+            </div>
           </div>
         ) : (
           <>
@@ -73,6 +159,9 @@ export default function HomePage() {
           </>
         )}
       </div>
+
+      {/* First-run onboarding modal */}
+      {showOnboarding && <FirstRunModal onClose={handleCloseOnboarding} />}
     </AppShell>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-type BadgeVariant = "default" | "listening" | "playing" | "success" | "warning";
+type BadgeVariant = "default" | "listening" | "playing" | "success" | "warning" | "error";
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -15,6 +15,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   playing: "bg-accent/20 text-accent",
   success: "bg-success/20 text-success",
   warning: "bg-danger/20 text-danger",
+  error: "bg-danger/20 text-danger",
 };
 
 export function Badge({

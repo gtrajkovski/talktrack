@@ -20,12 +20,13 @@ interface RehearsalState {
 
   // Actions
   startSession: (talk: Talk, mode: RehearsalMode) => Promise<void>;
+  resumeSession: (session: RehearsalSession, talk: Talk) => Promise<void>;
   endSession: () => Promise<void>;
 
   // Navigation
-  nextSlide: () => void;
-  prevSlide: () => void;
-  goToSlide: (index: number) => void;
+  nextSlide: () => Promise<void>;
+  prevSlide: () => Promise<void>;
+  goToSlide: (index: number) => Promise<void>;
 
   // Playback
   setPlaying: (playing: boolean) => void;
@@ -57,6 +58,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       talkId: talk.id,
       mode,
       startedAt: Date.now(),
+      currentSlideIndex: 0,
       slidesCompleted: 0,
       totalSlides: talk.slides.length,
       attempts: [],
@@ -69,6 +71,21 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       session,
       talk,
       currentSlideIndex: 0,
+      isPlaying: false,
+      isPaused: false,
+      currentAttempt: null,
+    });
+  },
+
+  resumeSession: async (session: RehearsalSession, talk: Talk) => {
+    // Clear any paused timestamp since we're resuming
+    session.pausedAt = undefined;
+    await sessionsDB.updateSession(session);
+
+    set({
+      session,
+      talk,
+      currentSlideIndex: session.currentSlideIndex,
       isPlaying: false,
       isPaused: false,
       currentAttempt: null,
@@ -91,41 +108,56 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     });
   },
 
-  nextSlide: () => {
+  nextSlide: async () => {
     const { talk, currentSlideIndex, session, currentAttempt } = get();
     if (!talk || !session) return;
 
-    // Save current attempt if exists
+    // Save current attempt if exists - await to prevent data loss on quick navigation
     if (currentAttempt) {
       session.attempts.push(currentAttempt);
       session.slidesCompleted = currentSlideIndex + 1;
-      sessionsDB.updateSession(session);
     }
 
     if (currentSlideIndex < talk.slides.length - 1) {
+      const newIndex = currentSlideIndex + 1;
+      session.currentSlideIndex = newIndex;
+      await sessionsDB.updateSession(session);
+
       set({
-        currentSlideIndex: currentSlideIndex + 1,
+        currentSlideIndex: newIndex,
         currentAttempt: null,
         isPlaying: false,
       });
+    } else if (currentAttempt) {
+      // Last slide - just save the attempt
+      await sessionsDB.updateSession(session);
     }
   },
 
-  prevSlide: () => {
-    const { currentSlideIndex } = get();
+  prevSlide: async () => {
+    const { currentSlideIndex, session } = get();
     if (currentSlideIndex > 0) {
+      const newIndex = currentSlideIndex - 1;
+      if (session) {
+        session.currentSlideIndex = newIndex;
+        await sessionsDB.updateSession(session);
+      }
       set({
-        currentSlideIndex: currentSlideIndex - 1,
+        currentSlideIndex: newIndex,
         currentAttempt: null,
         isPlaying: false,
       });
     }
   },
 
-  goToSlide: (index: number) => {
-    const { talk } = get();
+  goToSlide: async (index: number) => {
+    const { talk, session } = get();
     if (!talk) return;
     if (index >= 0 && index < talk.slides.length) {
+      if (session) {
+        session.currentSlideIndex = index;
+        await sessionsDB.updateSession(session);
+      }
       set({
         currentSlideIndex: index,
         currentAttempt: null,
