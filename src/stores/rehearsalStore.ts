@@ -8,11 +8,17 @@ import * as talksDB from "@/lib/db/talks";
 // Audio state for multimodal sync
 export type AudioState = 'idle' | 'speaking' | 'listening' | 'processing' | 'paused' | 'error';
 
+// Practice mode options
+export type PracticeMode = 'all' | 'bookmarksOnly' | 'hardOnly';
+
 // Speed multiplier constants
 export const MIN_SPEED = 0.5;
 export const MAX_SPEED = 2.0;
 export const DEFAULT_SPEED = 1.0;
 export const SPEED_STEP = 0.1;
+
+// Score threshold for "hard" slides
+export const HARD_SCORE_THRESHOLD = 50;
 
 interface RehearsalState {
   // Current session
@@ -26,6 +32,10 @@ interface RehearsalState {
 
   // Speed control (multiplier applied on top of settings.speechRate)
   speedMultiplier: number;
+
+  // Bookmark and practice mode
+  bookmarkedSlides: Set<string>;  // Slide IDs
+  practiceMode: PracticeMode;
 
   // Current attempt tracking
   currentAttempt: SlideAttempt | null;
@@ -69,6 +79,19 @@ interface RehearsalState {
   setSpeedMultiplier: (speed: number) => void;
   getEffectiveSpeed: (baseRate: number) => number;  // baseRate * speedMultiplier
 
+  // Bookmark actions
+  toggleBookmark: (slideId: string) => boolean;  // Returns true if now bookmarked
+  addBookmark: (slideId: string) => void;
+  removeBookmark: (slideId: string) => void;
+  clearBookmarks: () => void;
+  isBookmarked: (slideId: string) => boolean;
+  getBookmarkedSlideIndices: () => number[];
+
+  // Practice mode actions
+  setPracticeMode: (mode: PracticeMode) => void;
+  getFilteredSlideIndices: () => number[];  // Indices based on current practice mode
+  getHardSlideIndices: () => number[];  // Slides with lastScore < threshold
+
   // Multimodal state sync actions
   setAudioState: (state: AudioState) => void;
   setLastCommand: (command: string) => void;
@@ -87,6 +110,10 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
 
   // Speed control initial value
   speedMultiplier: DEFAULT_SPEED,
+
+  // Bookmark and practice mode initial values
+  bookmarkedSlides: new Set<string>(),
+  practiceMode: 'all' as PracticeMode,
 
   // Multimodal state sync initial values
   audioState: 'idle',
@@ -118,6 +145,8 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPaused: false,
       currentAttempt: null,
       speedMultiplier: DEFAULT_SPEED,
+      // Preserve bookmarks across sessions (don't reset)
+      practiceMode: 'all' as PracticeMode,
     });
   },
 
@@ -150,6 +179,8 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPaused: false,
       currentAttempt: null,
       speedMultiplier: DEFAULT_SPEED,
+      bookmarkedSlides: new Set<string>(),
+      practiceMode: 'all' as PracticeMode,
     });
   },
 
@@ -310,5 +341,86 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   getEffectiveSpeed: (baseRate: number) => {
     const { speedMultiplier } = get();
     return baseRate * speedMultiplier;
+  },
+
+  // Bookmark actions
+  toggleBookmark: (slideId: string) => {
+    const { bookmarkedSlides } = get();
+    const newSet = new Set(bookmarkedSlides);
+    const isNowBookmarked = !newSet.has(slideId);
+    if (isNowBookmarked) {
+      newSet.add(slideId);
+    } else {
+      newSet.delete(slideId);
+    }
+    set({ bookmarkedSlides: newSet });
+    return isNowBookmarked;
+  },
+
+  addBookmark: (slideId: string) => {
+    const { bookmarkedSlides } = get();
+    const newSet = new Set(bookmarkedSlides);
+    newSet.add(slideId);
+    set({ bookmarkedSlides: newSet });
+  },
+
+  removeBookmark: (slideId: string) => {
+    const { bookmarkedSlides } = get();
+    const newSet = new Set(bookmarkedSlides);
+    newSet.delete(slideId);
+    set({ bookmarkedSlides: newSet });
+  },
+
+  clearBookmarks: () => {
+    set({ bookmarkedSlides: new Set<string>() });
+  },
+
+  isBookmarked: (slideId: string) => {
+    const { bookmarkedSlides } = get();
+    return bookmarkedSlides.has(slideId);
+  },
+
+  getBookmarkedSlideIndices: () => {
+    const { talk, bookmarkedSlides } = get();
+    if (!talk) return [];
+    return talk.slides
+      .filter(slide => bookmarkedSlides.has(slide.id))
+      .map(slide => slide.index);
+  },
+
+  // Practice mode actions
+  setPracticeMode: (mode: PracticeMode) => {
+    set({ practiceMode: mode });
+  },
+
+  getFilteredSlideIndices: () => {
+    const { talk, practiceMode, bookmarkedSlides } = get();
+    if (!talk) return [];
+
+    switch (practiceMode) {
+      case 'bookmarksOnly':
+        return talk.slides
+          .filter(slide => bookmarkedSlides.has(slide.id))
+          .map(slide => slide.index);
+      case 'hardOnly':
+        return talk.slides
+          .filter(slide =>
+            slide.lastScore !== undefined && slide.lastScore < HARD_SCORE_THRESHOLD
+          )
+          .map(slide => slide.index);
+      case 'all':
+      default:
+        return talk.slides.map(slide => slide.index);
+    }
+  },
+
+  getHardSlideIndices: () => {
+    const { talk } = get();
+    if (!talk) return [];
+    return talk.slides
+      .filter(slide =>
+        slide.lastScore !== undefined && slide.lastScore < HARD_SCORE_THRESHOLD
+      )
+      .map(slide => slide.index);
   },
 }));
