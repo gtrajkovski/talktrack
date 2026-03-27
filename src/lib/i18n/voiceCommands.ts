@@ -41,6 +41,11 @@ export interface VoiceCommandSet {
   // Practice modes (Prompt 05)
   hardOnly: string[];
   allSlides: string[];
+  // Granularity modes (Prompt 06)
+  sentenceMode: string[];
+  paragraphMode: string[];
+  slideMode: string[];
+  whatMode: string[];  // "What mode am I in?"
 }
 
 export const LANGUAGE_LABELS: Record<CommandLanguage, string> = {
@@ -101,6 +106,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     // Practice modes
     hardOnly: ["hard only", "hard slides only", "difficult only"],
     allSlides: ["all slides", "practice all", "full practice"],
+    // Granularity modes
+    sentenceMode: ["sentence mode", "by sentence", "sentence by sentence"],
+    paragraphMode: ["paragraph mode", "by paragraph", "paragraph by paragraph"],
+    slideMode: ["slide mode", "by slide", "full slides"],
+    whatMode: ["what mode", "current mode", "which mode"],
   },
 
   // Macedonian (Македонски)
@@ -145,6 +155,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     // Practice modes
     hardOnly: ["само тешки", "тешки слајдови"],
     allSlides: ["сите слајдови", "вежбај се"],
+    // Granularity modes
+    sentenceMode: ["по реченици", "реченица по реченица"],
+    paragraphMode: ["по параграфи", "параграф по параграф"],
+    slideMode: ["по слајдови", "цели слајдови"],
+    whatMode: ["кој режим", "кој мод"],
   },
 
   // Albanian (Shqip) - Kosovo/Albania
@@ -189,6 +204,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     // Practice modes
     hardOnly: ["vetëm të vështirat", "slajdet e vështira"],
     allSlides: ["të gjitha slajdet", "praktiko të gjitha"],
+    // Granularity modes
+    sentenceMode: ["mënyra fjali", "fjali për fjali"],
+    paragraphMode: ["mënyra paragraf", "paragraf për paragraf"],
+    slideMode: ["mënyra slajd", "slajde të plota"],
+    whatMode: ["cila mënyrë", "cili mod"],
   },
 
   // Italian (Italiano)
@@ -233,6 +253,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     // Practice modes
     hardOnly: ["solo difficili", "slide difficili"],
     allSlides: ["tutte le slide", "pratica tutto"],
+    // Granularity modes
+    sentenceMode: ["modalità frase", "frase per frase"],
+    paragraphMode: ["modalità paragrafo", "paragrafo per paragrafo"],
+    slideMode: ["modalità slide", "slide intere"],
+    whatMode: ["quale modalità", "che modalità"],
   },
 };
 
@@ -267,7 +292,9 @@ const PLAYBACK_COMMANDS: (keyof VoiceCommandSet)[] = [
   // Repeat variations
   "repeatSlowly", "repeatTitle",
   // Practice modes
-  "hardOnly", "allSlides"
+  "hardOnly", "allSlides",
+  // Granularity modes
+  "sentenceMode", "paragraphMode", "slideMode", "whatMode",
 ];
 
 /**

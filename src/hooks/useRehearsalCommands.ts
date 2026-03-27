@@ -74,6 +74,11 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     setPracticeMode,
     practiceMode,
     getHardSlideIndices,
+    // Granularity
+    granularity,
+    setGranularity,
+    chunks,
+    currentChunkIndex,
   } = useRehearsalStore();
 
   const commands = getCommands(commandLanguage);
@@ -427,6 +432,55 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     return false;
   }, [getHardSlideIndices, setPracticeMode, talk, currentSlideIndex, onGoToSlide, speakInfoWithFeedback]);
 
+  // Handle granularity mode commands
+  const handleGranularityCommand = useCallback((command: string): boolean => {
+    switch (command) {
+      case "sentenceMode": {
+        if (granularity === 'sentence') {
+          speakInfoWithFeedback("Already in sentence mode");
+        } else {
+          setGranularity('sentence');
+          earcons.modeChange();
+          speakInfoWithFeedback("Sentence mode");
+        }
+        return true;
+      }
+      case "paragraphMode": {
+        if (granularity === 'paragraph') {
+          speakInfoWithFeedback("Already in paragraph mode");
+        } else {
+          setGranularity('paragraph');
+          earcons.modeChange();
+          speakInfoWithFeedback("Paragraph mode");
+        }
+        return true;
+      }
+      case "slideMode": {
+        if (granularity === 'slide') {
+          speakInfoWithFeedback("Already in slide mode");
+        } else {
+          setGranularity('slide');
+          earcons.modeChange();
+          speakInfoWithFeedback("Slide mode");
+        }
+        return true;
+      }
+      case "whatMode": {
+        const modeNames = {
+          sentence: "sentence mode",
+          paragraph: "paragraph mode",
+          slide: "slide mode",
+        };
+        const chunkInfo = chunks.length > 0
+          ? ` - chunk ${currentChunkIndex + 1} of ${chunks.length}`
+          : "";
+        speakInfoWithFeedback(`${modeNames[granularity]}${chunkInfo}`);
+        return true;
+      }
+    }
+    return false;
+  }, [granularity, setGranularity, chunks, currentChunkIndex, speakInfoWithFeedback]);
+
   // Handle base navigation commands
   const handleBaseCommand = useCallback((command: string): boolean => {
     switch (command) {
@@ -499,10 +553,11 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     if (handleScoreCommand(command)) return command;
     if (handleRepeatVariationCommand(command)) return command;
     if (handlePracticeModeCommand(command)) return command;
+    if (handleGranularityCommand(command)) return command;
     if (handleBaseCommand(command)) return command;
 
     return command;
-  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleBaseCommand]);
+  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleGranularityCommand, handleBaseCommand]);
 
   /**
    * Check command without executing (for preview/logging)
@@ -524,6 +579,10 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     bookmarkCount: getBookmarkedSlideIndices().length,
     // Practice mode state
     practiceMode,
+    // Granularity state
+    granularity,
+    chunkCount: chunks.length,
+    currentChunkIndex,
   };
 }
 

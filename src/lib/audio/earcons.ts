@@ -366,6 +366,34 @@ export function bookmarkRemoved(): void {
   setTimeout(() => playTone(392, 0.1, 'triangle', 0.4), 60);
 }
 
+/**
+ * Paragraph break - subtle G4 tone for paragraph transitions
+ * Single soft tone indicating paragraph boundary
+ */
+export function paragraphBreak(): void {
+  if (!shouldPlay()) return;
+  playTone(392, 0.15, 'sine', 0.25);
+}
+
+/**
+ * Sentence advance - very subtle tick for sentence progression
+ * Quick soft ping
+ */
+export function sentenceAdvance(): void {
+  if (!shouldPlay()) return;
+  playTone(587, 0.06, 'sine', 0.2);
+}
+
+/**
+ * Mode change - distinctive two-tone indicating granularity switch
+ * D5 → A5 ascending
+ */
+export function modeChange(): void {
+  if (!shouldPlay()) return;
+  playTone(587, 0.08, 'triangle', 0.35);
+  setTimeout(() => playTone(880, 0.1, 'triangle', 0.4), 70);
+}
+
 // ============================================================================
 // CONVENIENCE EXPORT
 // ============================================================================
@@ -395,6 +423,9 @@ export const earcons = {
   muteToggle,
   bookmarkAdded,
   bookmarkRemoved,
+  paragraphBreak,
+  sentenceAdvance,
+  modeChange,
 };
 
 export default earcons;

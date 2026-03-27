@@ -1,4 +1,5 @@
 import type { CommandLanguage } from "@/lib/i18n/voiceCommands";
+import type { Granularity } from "@/lib/utils/chunker";
 
 export interface UserSettings {
   voiceName: string;
@@ -24,6 +25,8 @@ export interface UserSettings {
   useElevenLabs: boolean;
   // Voice picker
   hasSelectedVoice: boolean;
+  // Granularity (Prompt 06)
+  defaultGranularity: Granularity;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -50,4 +53,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   useElevenLabs: false,
   // Voice picker
   hasSelectedVoice: false,
+  // Granularity default
+  defaultGranularity: "slide",
 };

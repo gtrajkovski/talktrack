@@ -2,8 +2,11 @@ import { create } from "zustand";
 import { nanoid } from "nanoid";
 import type { Talk, Slide } from "@/types/talk";
 import type { RehearsalSession, RehearsalMode, SlideAttempt } from "@/types/session";
+import { type Chunk, type Granularity, chunkTalk, findChunkBySlide } from "@/lib/utils/chunker";
 import * as sessionsDB from "@/lib/db/sessions";
 import * as talksDB from "@/lib/db/talks";
+
+export type { Granularity } from "@/lib/utils/chunker";
 
 // Audio state for multimodal sync
 export type AudioState = 'idle' | 'speaking' | 'listening' | 'processing' | 'paused' | 'error';
@@ -36,6 +39,11 @@ interface RehearsalState {
   // Bookmark and practice mode
   bookmarkedSlides: Set<string>;  // Slide IDs
   practiceMode: PracticeMode;
+
+  // Granularity (sentence/paragraph/slide)
+  granularity: Granularity;
+  chunks: Chunk[];
+  currentChunkIndex: number;
 
   // Current attempt tracking
   currentAttempt: SlideAttempt | null;
@@ -92,6 +100,16 @@ interface RehearsalState {
   getFilteredSlideIndices: () => number[];  // Indices based on current practice mode
   getHardSlideIndices: () => number[];  // Slides with lastScore < threshold
 
+  // Granularity actions
+  setGranularity: (granularity: Granularity) => void;
+  rebuildChunks: () => void;
+  advanceChunk: () => boolean;  // Returns true if advanced, false if at end
+  goBackChunk: () => boolean;   // Returns true if went back, false if at start
+  getCurrentChunk: () => Chunk | null;
+  isLastChunk: () => boolean;
+  isFirstChunk: () => boolean;
+  getChunkProgress: () => number;  // 0-100 based on chunks
+
   // Multimodal state sync actions
   setAudioState: (state: AudioState) => void;
   setLastCommand: (command: string) => void;
@@ -115,6 +133,11 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   bookmarkedSlides: new Set<string>(),
   practiceMode: 'all' as PracticeMode,
 
+  // Granularity initial values
+  granularity: 'slide' as Granularity,
+  chunks: [] as Chunk[],
+  currentChunkIndex: 0,
+
   // Multimodal state sync initial values
   audioState: 'idle',
   lastCommand: null,
@@ -137,6 +160,10 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     await sessionsDB.createSession(session);
     await talksDB.incrementRehearsalCount(talk.id);
 
+    // Build initial chunks based on current granularity setting
+    const { granularity } = get();
+    const chunks = chunkTalk(talk.slides, granularity);
+
     set({
       session,
       talk,
@@ -147,6 +174,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       speedMultiplier: DEFAULT_SPEED,
       // Preserve bookmarks across sessions (don't reset)
       practiceMode: 'all' as PracticeMode,
+      // Initialize chunks
+      chunks,
+      currentChunkIndex: 0,
     });
   },
 
@@ -155,6 +185,11 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     session.pausedAt = undefined;
     await sessionsDB.updateSession(session);
 
+    // Rebuild chunks for the resumed session
+    const { granularity } = get();
+    const chunks = chunkTalk(talk.slides, granularity);
+    const chunkIndex = findChunkBySlide(chunks, session.currentSlideIndex);
+
     set({
       session,
       talk,
@@ -162,6 +197,8 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPlaying: false,
       isPaused: false,
       currentAttempt: null,
+      chunks,
+      currentChunkIndex: chunkIndex,
     });
   },
 
@@ -181,6 +218,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       speedMultiplier: DEFAULT_SPEED,
       bookmarkedSlides: new Set<string>(),
       practiceMode: 'all' as PracticeMode,
+      // Reset chunks but preserve granularity preference
+      chunks: [] as Chunk[],
+      currentChunkIndex: 0,
     });
   },
 
@@ -422,5 +462,127 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
         slide.lastScore !== undefined && slide.lastScore < HARD_SCORE_THRESHOLD
       )
       .map(slide => slide.index);
+  },
+
+  // Granularity actions
+  setGranularity: (granularity: Granularity) => {
+    const { talk, currentSlideIndex, chunks } = get();
+    if (!talk) {
+      set({ granularity });
+      return;
+    }
+
+    // Rebuild chunks with new granularity
+    const newChunks = chunkTalk(talk.slides, granularity);
+
+    // Find chunk that corresponds to current slide (preserve position)
+    const newChunkIndex = findChunkBySlide(newChunks, currentSlideIndex);
+
+    set({
+      granularity,
+      chunks: newChunks,
+      currentChunkIndex: newChunkIndex,
+    });
+  },
+
+  rebuildChunks: () => {
+    const { talk, granularity, currentSlideIndex } = get();
+    if (!talk) {
+      set({ chunks: [], currentChunkIndex: 0 });
+      return;
+    }
+
+    const newChunks = chunkTalk(talk.slides, granularity);
+    const newChunkIndex = findChunkBySlide(newChunks, currentSlideIndex);
+
+    set({
+      chunks: newChunks,
+      currentChunkIndex: newChunkIndex,
+    });
+  },
+
+  advanceChunk: () => {
+    const { chunks, currentChunkIndex, talk, session } = get();
+    if (chunks.length === 0 || currentChunkIndex >= chunks.length - 1) {
+      return false;
+    }
+
+    const newIndex = currentChunkIndex + 1;
+    const newChunk = chunks[newIndex];
+
+    // If we're moving to a new slide, update slide index
+    const currentChunk = chunks[currentChunkIndex];
+    if (newChunk && currentChunk && newChunk.slideIndex !== currentChunk.slideIndex) {
+      if (session) {
+        session.currentSlideIndex = newChunk.slideIndex;
+        sessionsDB.updateSession(session);
+      }
+      set({
+        currentChunkIndex: newIndex,
+        currentSlideIndex: newChunk.slideIndex,
+        isPlaying: false,
+      });
+    } else {
+      set({
+        currentChunkIndex: newIndex,
+        isPlaying: false,
+      });
+    }
+
+    return true;
+  },
+
+  goBackChunk: () => {
+    const { chunks, currentChunkIndex, session } = get();
+    if (chunks.length === 0 || currentChunkIndex <= 0) {
+      return false;
+    }
+
+    const newIndex = currentChunkIndex - 1;
+    const newChunk = chunks[newIndex];
+
+    // If we're moving to a previous slide, update slide index
+    const currentChunk = chunks[currentChunkIndex];
+    if (newChunk && currentChunk && newChunk.slideIndex !== currentChunk.slideIndex) {
+      if (session) {
+        session.currentSlideIndex = newChunk.slideIndex;
+        sessionsDB.updateSession(session);
+      }
+      set({
+        currentChunkIndex: newIndex,
+        currentSlideIndex: newChunk.slideIndex,
+        isPlaying: false,
+      });
+    } else {
+      set({
+        currentChunkIndex: newIndex,
+        isPlaying: false,
+      });
+    }
+
+    return true;
+  },
+
+  getCurrentChunk: () => {
+    const { chunks, currentChunkIndex } = get();
+    if (chunks.length === 0) return null;
+    return chunks[currentChunkIndex] || null;
+  },
+
+  isLastChunk: () => {
+    const { chunks, currentChunkIndex } = get();
+    if (chunks.length === 0) return false;
+    return currentChunkIndex === chunks.length - 1;
+  },
+
+  isFirstChunk: () => {
+    const { currentChunkIndex } = get();
+    return currentChunkIndex === 0;
+  },
+
+  getChunkProgress: () => {
+    const { chunks, currentChunkIndex } = get();
+    if (chunks.length === 0) return 0;
+    return ((currentChunkIndex + 1) / chunks.length) * 100;
   },
 }));
