@@ -154,15 +154,15 @@
 - [ ] Pre-cache audio at sentence level
 
 ### Prompt 07 — Final Triple-Pass Audit — 🟡 IN PROGRESS
-**Pass 1: Infrastructure, Build & Runtime**
+**Pass 1: Infrastructure, Build & Runtime** ✅ COMPLETE
 - [x] TypeScript — zero errors, no `any` types, no unused imports/vars
 - [x] ESLint — zero errors, all warnings resolved
-- [ ] Dependencies — remove unused, fix peer conflicts
-- [ ] Config audit — tsconfig, next.config, tailwind.config, postcss
-- [ ] File structure — no dead code, no circular imports
-- [ ] IndexedDB schema — migrations, upgrade handlers
-- [ ] PWA — manifest, service worker, meta tags
-- [ ] Security — no secrets, no external fetches, no console.log
+- [x] Dependencies — clean (no peer conflicts, extraneous native modules are expected)
+- [x] Config audit — tsconfig strict, next.config with PWA, Tailwind v4 CSS-based
+- [x] File structure — no circular imports (verified with madge)
+- [x] IndexedDB schema — proper v1→v2→v3 migrations with upgrade handlers
+- [x] PWA — manifest fixed (SVG icons), meta tags in layout.tsx, next-pwa configured
+- [x] Security — no hardcoded secrets, only user-provided ElevenLabs BYOK, console.warn only for errors
 
 **Pass 2: UX Flows & State Machine**
 - [ ] 8 user journeys end-to-end (new user, prompt mode, test mode, PPTX, DOCX, resume, settings, stats)

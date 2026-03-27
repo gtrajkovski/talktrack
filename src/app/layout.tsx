@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} h-full`}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className="min-h-dvh flex flex-col bg-bg text-text">
         {children}
