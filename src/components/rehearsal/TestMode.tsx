@@ -3,18 +3,19 @@
 import { useEffect, useCallback, useState, useRef } from "react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
-import { SlideHeader } from "./SlideHeader";
-import { VoiceStatus } from "./VoiceStatus";
+import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
 import { TimerOverlay } from "./TimerOverlay";
 import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
-import { slideTransition } from "@/lib/audio/chime";
+import * as earcons from "@/lib/audio/earcons";
 import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio/recorder";
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useRehearsalStore } from "@/stores/rehearsalStore";
+import { useEarconSync } from "@/hooks/useEarconSync";
 import type { Slide } from "@/types/talk";
 
 interface TestModeProps {
@@ -42,12 +43,16 @@ export function TestMode({
   onUsedHelp,
 }: TestModeProps) {
   const { speechRate, voiceName, showTimer, timerWarningSeconds, commandLanguage } = useSettingsStore();
+  const { setAudioState, setLastCommand, setTranscript: setStoreTranscript, clearTranscript } = useRehearsalStore();
   const canRecord = isRecordingSupported();
   const commands = getCommands(commandLanguage);
   const recognitionLocale = getRecognitionLocale(commandLanguage);
   const [status, setStatus] = useState<"playing" | "listening" | "idle" | "error">("idle");
   const [helpUsed, setHelpUsed] = useState(false);
   const [transcript, setTranscript] = useState("");
+
+  // Sync earcons with settings and play on state transitions
+  useEarconSync();
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -69,9 +74,14 @@ export function TestMode({
     const command = matchCommand(text, commands, "test");
     if (command) {
       lastCommandTimeRef.current = now;
+      setLastCommand(command);
+      earcons.commandRecognized(); // Audio feedback for command detection
+      // Brief processing state
+      setAudioState('processing');
+      setTimeout(() => setAudioState('listening'), 200);
     }
     return command;
-  }, [commands]);
+  }, [commands, setLastCommand, setAudioState]);
 
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
@@ -85,6 +95,8 @@ export function TestMode({
   const handleBackRef = useRef<() => void>(() => {});
   const handleRepeatRef = useRef<() => void>(() => {});
   const handleHelpRef = useRef<() => void>(() => {});
+  const handleStopRef = useRef<() => void>(() => {});
+  const handleResumeRef = useRef<() => void>(() => {});
 
   // Start speech recognition with error recovery
   const startListening = useCallback(() => {
@@ -100,6 +112,7 @@ export function TestMode({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setStatus("idle");
+      setAudioState("idle");
       return;
     }
 
@@ -125,6 +138,7 @@ export function TestMode({
           fullTranscript += event.results[i][0].transcript;
         }
         setTranscript(fullTranscript);
+        setStoreTranscript(fullTranscript);
         transcriptRef.current = fullTranscript;
 
         const last = event.results[event.results.length - 1];
@@ -136,6 +150,8 @@ export function TestMode({
               case "back": handleBackRef.current(); break;
               case "repeat": handleRepeatRef.current(); break;
               case "help": handleHelpRef.current(); break;
+              case "stop": handleStopRef.current(); break;
+              case "resume": handleResumeRef.current(); break;
             }
           }
         }
@@ -171,14 +187,17 @@ export function TestMode({
 
           if (errorRetryCountRef.current <= 3) {
             setStatus("error");
+            setAudioState("error");
             setTimeout(() => {
               if (isMountedRef.current && isListeningRef.current) {
                 setStatus("listening");
+                setAudioState("listening");
                 startListening();
               }
             }, 2000);
           } else {
             setStatus("error");
+            setAudioState("error");
           }
         }
       };
@@ -188,43 +207,63 @@ export function TestMode({
       isListeningRef.current = true;
       errorRetryCountRef.current = 0;
       setStatus("listening");
+      setAudioState("listening");
+      earcons.micOn(); // Audio feedback that mic is now active
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
       setStatus("error");
+      setAudioState("error");
     }
-  }, [checkCommand, stopListening, recognitionLocale, canRecord]);
+  }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState]);
 
   const speakPrompt = useCallback(() => {
     setHelpUsed(false);
     setTranscript("");
+    clearTranscript();
     transcriptRef.current = "";
     stopListening();
     setStatus("playing");
+    setAudioState("speaking");
 
     speak(`Slide ${currentIndex + 1}: ${currentSlide.title}`, {
       rate: speechRate,
       voiceName: voiceName || undefined,
-      onEnd: () => startListening(),
+      onEnd: () => {
+        setAudioState("idle");
+        startListening();
+      },
     });
-  }, [currentIndex, currentSlide.title, speechRate, voiceName, startListening, stopListening]);
+  }, [currentIndex, currentSlide.title, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
 
   const handleHelp = useCallback(() => {
     stopListening();
+    earcons.micOff(); // Audio feedback that mic is off for TTS
     setHelpUsed(true);
     onUsedHelp();
     setStatus("playing");
+    setAudioState("speaking");
+    earcons.revealAnswer();
     speak(currentSlide.notes, {
       rate: speechRate,
       voiceName: voiceName || undefined,
-      onEnd: () => startListening(),
+      onEnd: () => {
+        setAudioState("idle");
+        startListening();
+      },
     });
-  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp]);
+  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
 
-  const handleRepeat = useCallback(() => { stop(); speakPrompt(); }, [speakPrompt]);
+  const handleRepeat = useCallback(() => {
+    stop();
+    earcons.repeat();
+    speakPrompt();
+  }, [speakPrompt]);
 
   const handleNext = useCallback(async () => {
     stop();
     stopListening();
+    setAudioState("idle");
+    clearTranscript();
 
     // Calculate and record score if user spoke something
     if (transcriptRef.current) {
@@ -238,15 +277,41 @@ export function TestMode({
     }
 
     if (isLastSlide) onComplete();
-    else { slideTransition(); onNext(); }
-  }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex]);
+    else { earcons.slideAdvance(); onNext(); }
+  }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex, setAudioState, clearTranscript]);
 
-  const handleBack = useCallback(() => { stop(); stopListening(); onPrev(); }, [onPrev, stopListening]);
+  const handleBack = useCallback(() => {
+    stop();
+    stopListening();
+    setAudioState("idle");
+    clearTranscript();
+    earcons.slideBack();
+    onPrev();
+  }, [onPrev, stopListening, setAudioState, clearTranscript]);
+
+  const handleStop = useCallback(() => {
+    stop();
+    stopListening();
+    earcons.micOff();
+    setStatus("idle");
+    setAudioState("paused");
+    // Keep listening for resume command only
+    startListening();
+  }, [stopListening, setAudioState, startListening]);
+
+  const handleResume = useCallback(() => {
+    stopListening();
+    startListening();
+    setStatus("listening");
+    setAudioState("listening");
+  }, [stopListening, startListening, setAudioState]);
 
   handleNextRef.current = handleNext;
   handleBackRef.current = handleBack;
   handleRepeatRef.current = handleRepeat;
   handleHelpRef.current = handleHelp;
+  handleStopRef.current = handleStop;
+  handleResumeRef.current = handleResume;
 
   // Track mounted state for cleanup
   useEffect(() => {
@@ -265,8 +330,9 @@ export function TestMode({
   return (
     <div className="flex flex-col h-full">
       <ProgressBar value={progress} size="lg" className="mb-6" />
-      <SlideHeader currentSlide={currentIndex + 1} totalSlides={slides.length} title={currentSlide.title} />
-      <VoiceStatus status={status} />
+
+      {/* Slide title - large and visible */}
+      <h2 className="text-xl font-bold text-center mb-4 px-4">{currentSlide.title}</h2>
 
       {showTimer && (
         <TimerOverlay
@@ -276,22 +342,45 @@ export function TestMode({
         />
       )}
 
-      <div className="flex-1 overflow-y-auto mb-6">
+      {/* Glanceable center area */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <StateOrb
+          onTap={() => {
+            // Toggle pause/resume
+            if (status === "listening") {
+              stopListening();
+              setStatus("idle");
+              setAudioState("paused");
+            } else if (status === "idle") {
+              startListening();
+            }
+          }}
+        />
+
+        {/* Live transcript below orb */}
+        {transcript && (
+          <p className="mt-4 text-sm text-text-dim text-center max-w-xs opacity-70 transition-opacity">
+            {transcript.slice(-100)}
+          </p>
+        )}
+      </div>
+
+      {/* Help notes or help button */}
+      <div className="mb-4">
         {helpUsed ? (
-          <div className="bg-surface rounded-[var(--radius)] p-4">
+          <div className="bg-surface rounded-[var(--radius)] p-4 max-h-32 overflow-y-auto">
             <div className="text-xs text-text-dim uppercase tracking-wide mb-2">Notes (help used)</div>
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{currentSlide.notes}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{currentSlide.notes}</p>
           </div>
         ) : (
           <div className="text-center">
-            <p className="text-text-dim mb-4">Recite everything from memory.<br />Say &quot;help&quot; if you get stuck.</p>
-            <Button onClick={handleHelp} variant="secondary">Need Help</Button>
+            <Button onClick={handleHelp} variant="secondary" className="text-sm">Need Help</Button>
           </div>
         )}
-        {transcript && <TranscriptScore transcript={transcript} originalNotes={currentSlide.notes} showScore={true} />}
+        {transcript && helpUsed && <TranscriptScore transcript={transcript} originalNotes={currentSlide.notes} showScore={true} />}
       </div>
 
-      <RehearsalControls onBack={handleBack} onRepeat={handleRepeat} onNext={handleNext} isFirstSlide={isFirstSlide} isLastSlide={isLastSlide} nextLabel="Got it" />
+      <RehearsalControls onBack={handleBack} onRepeat={handleRepeat} onNext={handleNext} isFirstSlide={isFirstSlide} isLastSlide={isLastSlide} nextLabel="Got it" iconOnly />
     </div>
   );
 }

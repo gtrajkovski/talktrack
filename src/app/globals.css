@@ -102,3 +102,50 @@ button:active, [role="button"]:active {
 .animate-slide-up {
   animation: slide-up 200ms ease-out;
 }
+
+/* StateOrb animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+@keyframes scale-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px var(--blue); }
+  50% { box-shadow: 0 0 40px var(--blue); }
+}
+
+@keyframes double-pulse {
+  0%, 20%, 50%, 100% { opacity: 1; }
+  10%, 40% { opacity: 0.6; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+.animate-scale-pulse {
+  animation: scale-pulse 1.2s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 1.5s ease-in-out infinite;
+}
+
+.animate-double-pulse {
+  animation: double-pulse 0.8s ease-in-out;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow,
+  .animate-scale-pulse,
+  .animate-glow,
+  .animate-double-pulse {
+    animation: none;
+  }
+}

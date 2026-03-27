@@ -37,7 +37,6 @@ export default function RehearsalPage() {
   const [mode, setMode] = useState<RehearsalMode>("listen");
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
 
   // Load talk and initialize session
   useEffect(() => {
@@ -76,13 +75,9 @@ export default function RehearsalPage() {
   }, [endSession]);
 
   const handleComplete = useCallback(() => {
-    // Capture sessionId before endSession clears it
-    if (session) {
-      setCompletedSessionId(session.id);
-    }
     setIsComplete(true);
     endSession();
-  }, [endSession, session]);
+  }, [endSession]);
 
   const handleExit = () => {
     endSession();
@@ -103,9 +98,7 @@ export default function RehearsalPage() {
         talkId={talk.id}
         talkTitle={talk.title}
         slidesCompleted={talk.slides.length}
-        totalSlides={talk.slides.length}
         mode={mode}
-        sessionId={completedSessionId}
       />
     );
   }

@@ -13,6 +13,11 @@ export interface UserSettings {
   hasSeenOnboarding: boolean;
   showTimer: boolean;
   timerWarningSeconds: number; // Warn when this many seconds remain
+  // Earcon settings
+  enableEarcons: boolean;
+  earconVolume: number; // 0-1, default 0.3
+  // Hint settings
+  enableHints: boolean;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -28,4 +33,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   hasSeenOnboarding: false,
   showTimer: false,
   timerWarningSeconds: 10,
+  // Earcon defaults
+  enableEarcons: true,
+  earconVolume: 0.3,
+  // Hint defaults
+  enableHints: true,
 };

@@ -4,6 +4,23 @@ import type { RehearsalSession } from "@/types/session";
 import type { UserSettings } from "@/types/settings";
 import type { Recording } from "@/types/recording";
 
+// Hint state for progressive command disclosure
+export interface HintState {
+  id: string; // talkId or 'global'
+  rehearsalCount: number;
+  hintsShown: Record<string, number>; // command -> times shown
+  commandsUsed: Record<string, number>; // command -> times used
+  lastUpdated: number;
+}
+
+// Streak data for positive reinforcement
+export interface StreakData {
+  id: string; // always 'streak'
+  currentStreak: number;
+  lastPracticeDate: string; // YYYY-MM-DD
+  longestStreak: number;
+}
+
 interface TalkTrackDB extends DBSchema {
   talks: {
     key: string;
@@ -24,10 +41,18 @@ interface TalkTrackDB extends DBSchema {
     value: Recording;
     indexes: { "by-session": string; "by-talk": string; "by-created": number };
   };
+  hints: {
+    key: string;
+    value: HintState;
+  };
+  streaks: {
+    key: string;
+    value: StreakData;
+  };
 }
 
 const DB_NAME = "talktrack";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<TalkTrackDB>> | null = null;
 
@@ -59,6 +84,16 @@ export function getDB(): Promise<IDBPDatabase<TalkTrackDB>> {
           recordingStore.createIndex("by-session", "sessionId");
           recordingStore.createIndex("by-talk", "talkId");
           recordingStore.createIndex("by-created", "createdAt");
+        }
+
+        // Hints store (added in v3) - for progressive command disclosure
+        if (!db.objectStoreNames.contains("hints")) {
+          db.createObjectStore("hints", { keyPath: "id" });
+        }
+
+        // Streaks store (added in v3) - for positive reinforcement
+        if (!db.objectStoreNames.contains("streaks")) {
+          db.createObjectStore("streaks", { keyPath: "id" });
         }
       },
     });

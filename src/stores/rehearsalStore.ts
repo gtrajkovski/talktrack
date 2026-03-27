@@ -5,6 +5,9 @@ import type { RehearsalSession, RehearsalMode, SlideAttempt } from "@/types/sess
 import * as sessionsDB from "@/lib/db/sessions";
 import * as talksDB from "@/lib/db/talks";
 
+// Audio state for multimodal sync
+export type AudioState = 'idle' | 'speaking' | 'listening' | 'processing' | 'paused' | 'error';
+
 interface RehearsalState {
   // Current session
   session: RehearsalSession | null;
@@ -17,6 +20,13 @@ interface RehearsalState {
 
   // Current attempt tracking
   currentAttempt: SlideAttempt | null;
+
+  // Multimodal state sync
+  audioState: AudioState;
+  lastCommand: string | null;
+  lastCommandTimestamp: number | null;
+  currentTranscript: string;
+  isSpeechSupported: boolean;
 
   // Actions
   startSession: (talk: Talk, mode: RehearsalMode) => Promise<void>;
@@ -42,6 +52,13 @@ interface RehearsalState {
   getProgress: () => number;
   isLastSlide: () => boolean;
   isFirstSlide: () => boolean;
+
+  // Multimodal state sync actions
+  setAudioState: (state: AudioState) => void;
+  setLastCommand: (command: string) => void;
+  setTranscript: (text: string) => void;
+  clearTranscript: () => void;
+  setSpeechSupported: (supported: boolean) => void;
 }
 
 export const useRehearsalStore = create<RehearsalState>((set, get) => ({
@@ -51,6 +68,13 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   isPlaying: false,
   isPaused: false,
   currentAttempt: null,
+
+  // Multimodal state sync initial values
+  audioState: 'idle',
+  lastCommand: null,
+  lastCommandTimestamp: null,
+  currentTranscript: '',
+  isSpeechSupported: true,
 
   startSession: async (talk: Talk, mode: RehearsalMode) => {
     const session: RehearsalSession = {
@@ -223,4 +247,18 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     const { currentSlideIndex } = get();
     return currentSlideIndex === 0;
   },
+
+  // Multimodal state sync actions
+  setAudioState: (audioState: AudioState) => set({ audioState }),
+
+  setLastCommand: (command: string) => set({
+    lastCommand: command,
+    lastCommandTimestamp: Date.now(),
+  }),
+
+  setTranscript: (currentTranscript: string) => set({ currentTranscript }),
+
+  clearTranscript: () => set({ currentTranscript: '' }),
+
+  setSpeechSupported: (isSpeechSupported: boolean) => set({ isSpeechSupported }),
 }));

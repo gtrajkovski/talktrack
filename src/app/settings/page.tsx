@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { VoiceSelector } from "@/components/settings";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { LANGUAGE_LABELS, type CommandLanguage } from "@/lib/i18n/voiceCommands";
+import { resetHints } from "@/lib/commandHints";
 
 export default function SettingsPage() {
   const settings = useSettingsStore();
@@ -177,6 +178,91 @@ export default function SettingsPage() {
                   onChange={(e) => settings.updateSettings({ timerWarningSeconds: parseInt(e.target.value) })}
                   className="w-full accent-accent h-2"
                 />
+              </div>
+            )}
+
+            {/* Sound Effects (Earcons) */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Sound Effects</div>
+                <div className="text-sm text-text-dim">
+                  Audio cues for state changes
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ enableEarcons: !settings.enableEarcons })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.enableEarcons ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableEarcons ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {/* Earcon Volume */}
+            {settings.enableEarcons && (
+              <div className="pl-4 border-l-2 border-surface-light">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-text-dim">Volume</span>
+                  <span className="font-medium">{Math.round(settings.earconVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  value={settings.earconVolume}
+                  onChange={(e) => settings.updateSettings({ earconVolume: parseFloat(e.target.value) })}
+                  className="w-full accent-accent h-2"
+                />
+              </div>
+            )}
+
+            {/* Command Hints */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Command Hints</div>
+                <div className="text-sm text-text-dim">
+                  Teach voice commands during rehearsal
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ enableHints: !settings.enableHints })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.enableHints ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableHints ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {/* Reset Hints */}
+            {settings.enableHints && (
+              <div className="pl-4 border-l-2 border-surface-light">
+                <button
+                  onClick={() => {
+                    resetHints();
+                    alert("Command hints have been reset. You'll see hints again during your next rehearsal.");
+                  }}
+                  className="text-sm text-accent hover:underline"
+                >
+                  Reset Command Hints
+                </button>
+                <p className="text-xs text-text-dim mt-1">
+                  Re-learn all voice commands from scratch
+                </p>
               </div>
             )}
           </div>
