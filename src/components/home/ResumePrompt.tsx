@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { RehearsalSession } from "@/types/session";
 import type { Talk } from "@/types/talk";
-import { formatDuration } from "@/lib/utils/formatDuration";
 
 interface ResumePromptProps {
   session: RehearsalSession;

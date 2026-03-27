@@ -7,7 +7,6 @@
  */
 
 import * as synthesis from "./synthesis";
-import * as elevenLabs from "./elevenlabs";
 
 // Re-export types from synthesis for convenience
 export type { SpeakOptions } from "./synthesis";

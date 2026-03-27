@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
-import type { Talk } from "@/types/talk";
 
 export default function SlidesPage() {
   const params = useParams();
   const { talks, loadTalks } = useTalksStore();
-  const [talk, setTalk] = useState<Talk | null>(null);
 
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
 
-  useEffect(() => {
-    const found = talks.find((t) => t.id === params.id);
-    if (found) setTalk(found);
-  }, [talks, params.id]);
+  // Derive talk from talks array (no setState needed)
+  const talk = useMemo(
+    () => talks.find((t) => t.id === params.id) ?? null,
+    [talks, params.id]
+  );
 
   if (!talk) {
     return (

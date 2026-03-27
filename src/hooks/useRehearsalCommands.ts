@@ -254,7 +254,6 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
 
     switch (command) {
       case "bookmark": {
-        const wasBookmarked = isBookmarked(currentSlide.id);
         const nowBookmarked = toggleBookmark(currentSlide.id);
         if (nowBookmarked) {
           earcons.bookmarkAdded();

@@ -3,7 +3,6 @@
 import { useEffect, useCallback, useState, useRef } from "react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
-import { SlideHeader } from "./SlideHeader";
 import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
@@ -35,6 +34,10 @@ interface PromptModeProps {
 // Detect iOS for speech overlap workaround
 const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+// Exponential backoff delays for error recovery (module-level to avoid dependency issues)
+const ERROR_RETRY_DELAYS = [500, 1000, 2000, 4000];
+const SILENCE_NUDGE_DELAY = 15000; // 15 seconds before nudge
+
 export function PromptMode({
   slides,
   currentIndex,
@@ -64,10 +67,6 @@ export function PromptMode({
   const transcriptRef = useRef("");
   const silenceNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const silenceNudgeShownRef = useRef(false); // Only show once per slide
-
-  // Exponential backoff delays for error recovery
-  const ERROR_RETRY_DELAYS = [500, 1000, 2000, 4000];
-  const SILENCE_NUDGE_DELAY = 15000; // 15 seconds before nudge
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
@@ -112,6 +111,7 @@ export function PromptMode({
   const handleRevealRef = useRef<() => void>(() => {});
   const handleStopRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
+  const startListeningRef = useRef<() => void>(() => {});
 
   // Start speech recognition with error recovery
   const startListening = useCallback(() => {
@@ -120,7 +120,7 @@ export function PromptMode({
 
     // iOS: Don't start listening if TTS is still speaking (300ms buffer)
     if (isIOS && isSpeaking()) {
-      setTimeout(() => startListening(), 300);
+      setTimeout(() => startListeningRef.current(), 300);
       return;
     }
 
@@ -135,7 +135,7 @@ export function PromptMode({
         voicebox.play("Still listening — take your time, or say next to move on", {
           rate: 0.9,
           onEnd: () => {
-            if (isMountedRef.current) startListening();
+            if (isMountedRef.current) startListeningRef.current();
           },
         });
       }
@@ -244,7 +244,7 @@ export function PromptMode({
               if (isMountedRef.current && isListeningRef.current) {
                 setStatus("listening");
                 setAudioState("listening");
-                startListening();
+                startListeningRef.current();
               }
             }, delay);
           } else {
@@ -267,7 +267,12 @@ export function PromptMode({
       setStatus("error");
       setAudioState("error");
     }
-  }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState]);
+  }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState, setStoreTranscript]);
+
+  // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  });
 
   // Speak the slide title and start listening
   const speakTitle = useCallback(() => {
@@ -365,13 +370,15 @@ export function PromptMode({
     setAudioState("listening");
   }, [stopListening, startListening, setAudioState]);
 
-  // Update refs
-  handleNextRef.current = handleNext;
-  handleBackRef.current = handleBack;
-  handleRepeatRef.current = handleRepeat;
-  handleRevealRef.current = handleReveal;
-  handleStopRef.current = handleStop;
-  handleResumeRef.current = handleResume;
+  // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+    handleBackRef.current = handleBack;
+    handleRepeatRef.current = handleRepeat;
+    handleRevealRef.current = handleReveal;
+    handleStopRef.current = handleStop;
+    handleResumeRef.current = handleResume;
+  });
 
   // Track mounted state for cleanup
   useEffect(() => {
@@ -383,6 +390,7 @@ export function PromptMode({
 
   // Initial title speak on slide change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional TTS init
     speakTitle();
     return () => {
       voicebox.stop();

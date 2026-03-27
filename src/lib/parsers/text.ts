@@ -24,7 +24,6 @@ export function parseText(text: string, wordsPerMinute: number = 100): ParseResu
   let unnamedSectionCount = 0;
 
   // Split by section markers first
-  const sectionPattern = /^(?:#{1}\s+(.+)|[-=]{3,})$/m;
   const parts = text.trim().split(/\n(?=#{1}\s+|[-=]{3,}\s*$)/m);
 
   for (const part of parts) {

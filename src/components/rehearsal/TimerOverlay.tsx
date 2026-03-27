@@ -23,7 +23,9 @@ export function TimerOverlay({
   const hasExpiredRef = useRef(false);
 
   // Reset timer when totalSeconds changes (new slide)
+  // Note: This setState-in-effect is intentional - resetting state when prop changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional prop sync
     setRemainingSeconds(totalSeconds);
     setIsExpired(false);
     hasExpiredRef.current = false;

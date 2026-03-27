@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 interface AudioPlayerProps {
   src: string;
@@ -99,15 +99,13 @@ interface AudioPlayerFromBlobProps {
 }
 
 export function AudioPlayerFromBlob({ blob, duration, onEnded }: AudioPlayerFromBlobProps) {
-  const [src, setSrc] = useState<string>("");
+  // Use useMemo to create blob URL (avoid setState in effect)
+  const src = useMemo(() => URL.createObjectURL(blob), [blob]);
 
+  // Cleanup the URL when blob changes or component unmounts
   useEffect(() => {
-    const url = URL.createObjectURL(blob);
-    setSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [blob]);
-
-  if (!src) return null;
+    return () => URL.revokeObjectURL(src);
+  }, [src]);
 
   return <AudioPlayer src={src} duration={duration} onEnded={onEnded} />;
 }

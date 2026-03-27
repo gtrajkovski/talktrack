@@ -22,16 +22,14 @@ export function PlaybackIndicator({
   compact = false,
   className = "",
 }: PlaybackIndicatorProps) {
-  const [progress, setProgress] = useState<PlaybackProgress | null>(null);
+  // Use lazy initializer to avoid setState in effect
+  const [progress, setProgress] = useState<PlaybackProgress | null>(() => {
+    const initial = getPlaybackProgress();
+    return initial.duration > 0 ? initial : null;
+  });
 
   useEffect(() => {
-    // Get initial state
-    const initial = getPlaybackProgress();
-    if (initial.duration > 0) {
-      setProgress(initial);
-    }
-
-    // Subscribe to updates
+    // Subscribe to updates (setState in callback is fine)
     const unsubscribe = onProgress((p) => {
       if (p.duration > 0) {
         setProgress(p);
@@ -104,12 +102,11 @@ export function PlaybackIndicator({
  * Shows just the progress bar with no extra UI
  */
 export function PlaybackBar({ className = "" }: { className?: string }) {
-  const [position, setPosition] = useState(0);
+  // Use lazy initializer to avoid setState in effect
+  const [position, setPosition] = useState(() => getPlaybackProgress().position);
 
   useEffect(() => {
-    const initial = getPlaybackProgress();
-    setPosition(initial.position);
-
+    // Subscribe to updates (setState in callback is fine)
     const unsubscribe = onProgress((p) => {
       setPosition(p.position);
     });

@@ -13,7 +13,6 @@ import { useTalksStore } from "@/stores/talksStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { sessionStart } from "@/lib/audio/chime";
 import { filterSlidesBySection } from "@/lib/utils/sections";
-import type { Slide } from "@/types/talk";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {

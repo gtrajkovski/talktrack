@@ -108,10 +108,8 @@ export function splitIntoSentences(text: string): string[] {
 
       // This looks like a real sentence end
       // Consume trailing whitespace
-      let trailing = "";
       let j = i + 1;
       while (j < normalized.length && /[ \t]/.test(normalized[j])) {
-        trailing += normalized[j];
         j++;
       }
 

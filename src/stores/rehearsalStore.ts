@@ -466,7 +466,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
 
   // Granularity actions
   setGranularity: (granularity: Granularity) => {
-    const { talk, currentSlideIndex, chunks } = get();
+    const { talk, currentSlideIndex } = get();
     if (!talk) {
       set({ granularity });
       return;
@@ -502,7 +502,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   },
 
   advanceChunk: () => {
-    const { chunks, currentChunkIndex, talk, session } = get();
+    const { chunks, currentChunkIndex, session } = get();
     if (chunks.length === 0 || currentChunkIndex >= chunks.length - 1) {
       return false;
     }

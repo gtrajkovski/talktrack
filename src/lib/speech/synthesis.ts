@@ -2,8 +2,11 @@ import * as elevenLabs from "./elevenlabs";
 
 type SpeechCallback = () => void;
 
-let currentUtterance: SpeechSynthesisUtterance | null = null;
-let onEndCallback: SpeechCallback | null = null;
+// State tracking for potential future use (e.g., cancellation, progress)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let _currentUtterance: SpeechSynthesisUtterance | null = null;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let _onEndCallback: SpeechCallback | null = null;
 let usingElevenLabs = false;
 
 // Volume control (0-1, default 1.0)
@@ -121,7 +124,7 @@ export function speak(text: string, options: SpeakOptions = {}): void {
     isOnline()
   ) {
     usingElevenLabs = true;
-    onEndCallback = onEnd || null;
+    _onEndCallback = onEnd || null;
 
     // Convert speech rate (Web Speech 0.7-1.3) to ElevenLabs speed (0.25-4.0)
     // Web Speech: 1.0 = normal, ElevenLabs: 1.0 = normal
@@ -133,7 +136,7 @@ export function speak(text: string, options: SpeakOptions = {}): void {
         volume: effectiveVolume,
         onEnd: () => {
           usingElevenLabs = false;
-          onEndCallback = null;
+          _onEndCallback = null;
           onEnd?.();
         },
       })
@@ -167,8 +170,8 @@ function webSpeechSpeak(
 
   const speakNextSentence = () => {
     if (sentenceIndex >= sentences.length) {
-      currentUtterance = null;
-      onEndCallback = null;
+      _currentUtterance = null;
+      _onEndCallback = null;
       onEnd?.();
       return;
     }
@@ -195,14 +198,14 @@ function webSpeechSpeak(
         return;
       }
       console.warn("Speech synthesis error:", error.error);
-      currentUtterance = null;
-      onEndCallback = null;
+      _currentUtterance = null;
+      _onEndCallback = null;
       // Still call onEnd so the app can continue
       onEnd?.();
     };
 
-    currentUtterance = utterance;
-    onEndCallback = onEnd || null;
+    _currentUtterance = utterance;
+    _onEndCallback = onEnd || null;
     speechSynthesis.speak(utterance);
   };
 
@@ -219,8 +222,8 @@ export function stop(): void {
   }
 
   speechSynthesis.cancel();
-  currentUtterance = null;
-  onEndCallback = null;
+  _currentUtterance = null;
+  _onEndCallback = null;
 }
 
 export function pause(): void {

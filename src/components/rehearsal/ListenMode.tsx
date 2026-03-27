@@ -281,7 +281,9 @@ export function ListenMode({
   }, []);
 
   // Speak slide on mount and slide change
+  // Note: speakSlide() sets status state which is intentional for TTS initialization
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional TTS init
     speakSlide();
     return () => {
       voicebox.stop();

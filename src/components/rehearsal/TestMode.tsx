@@ -99,6 +99,7 @@ export function TestMode({
   const handleHelpRef = useRef<() => void>(() => {});
   const handleStopRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
+  const startListeningRef = useRef<() => void>(() => {});
 
   // Start speech recognition with error recovery
   const startListening = useCallback(() => {
@@ -107,7 +108,7 @@ export function TestMode({
 
     // iOS: Don't start listening if TTS is still speaking
     if (isIOS && isSpeaking()) {
-      setTimeout(() => startListening(), 100);
+      setTimeout(() => startListeningRef.current(), 100);
       return;
     }
 
@@ -194,7 +195,7 @@ export function TestMode({
               if (isMountedRef.current && isListeningRef.current) {
                 setStatus("listening");
                 setAudioState("listening");
-                startListening();
+                startListeningRef.current();
               }
             }, 2000);
           } else {
@@ -216,7 +217,12 @@ export function TestMode({
       setStatus("error");
       setAudioState("error");
     }
-  }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState]);
+  }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState, setStoreTranscript]);
+
+  // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  });
 
   const speakPrompt = useCallback(() => {
     setHelpUsed(false);
@@ -308,12 +314,15 @@ export function TestMode({
     setAudioState("listening");
   }, [stopListening, startListening, setAudioState]);
 
-  handleNextRef.current = handleNext;
-  handleBackRef.current = handleBack;
-  handleRepeatRef.current = handleRepeat;
-  handleHelpRef.current = handleHelp;
-  handleStopRef.current = handleStop;
-  handleResumeRef.current = handleResume;
+  // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+    handleBackRef.current = handleBack;
+    handleRepeatRef.current = handleRepeat;
+    handleHelpRef.current = handleHelp;
+    handleStopRef.current = handleStop;
+    handleResumeRef.current = handleResume;
+  });
 
   // Track mounted state for cleanup
   useEffect(() => {
@@ -325,6 +334,7 @@ export function TestMode({
 
   // Initial prompt speak on slide change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional TTS init
     speakPrompt();
     return () => { voicebox.stop(); stopListening(); };
   }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps

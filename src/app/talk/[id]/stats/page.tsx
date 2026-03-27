@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
@@ -10,27 +10,29 @@ import { formatDuration } from "@/lib/utils/formatDuration";
 import { generateFullCsv, downloadCsv } from "@/lib/utils/exportCsv";
 import { getSessionsByTalk } from "@/lib/db/sessions";
 import { ProgressHeatmap } from "@/components/stats";
-import type { Talk } from "@/types/talk";
 import type { RehearsalSession } from "@/types/session";
 
 export default function StatsPage() {
   const params = useParams();
   const { talks, loadTalks } = useTalksStore();
-  const [talk, setTalk] = useState<Talk | null>(null);
   const [sessions, setSessions] = useState<RehearsalSession[]>([]);
 
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
 
+  // Derive talk from talks array (no setState needed)
+  const talk = useMemo(
+    () => talks.find((t) => t.id === params.id) ?? null,
+    [talks, params.id]
+  );
+
+  // Load sessions when talk is available
   useEffect(() => {
-    const found = talks.find((t) => t.id === params.id);
-    if (found) {
-      setTalk(found);
-      // Load sessions for this talk
-      getSessionsByTalk(found.id).then(setSessions);
+    if (talk) {
+      getSessionsByTalk(talk.id).then(setSessions);
     }
-  }, [talks, params.id]);
+  }, [talk]);
 
   const handleExport = useCallback(() => {
     if (!talk) return;
