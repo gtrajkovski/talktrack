@@ -18,6 +18,12 @@ export interface UserSettings {
   earconVolume: number; // 0-1, default 0.3
   // Hint settings
   enableHints: boolean;
+  // ElevenLabs settings
+  elevenLabsApiKey: string;
+  elevenLabsVoiceId: string;
+  useElevenLabs: boolean;
+  // Voice picker
+  hasSelectedVoice: boolean;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -38,4 +44,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
   earconVolume: 0.3,
   // Hint defaults
   enableHints: true,
+  // ElevenLabs defaults
+  elevenLabsApiKey: "",
+  elevenLabsVoiceId: "",
+  useElevenLabs: false,
+  // Voice picker
+  hasSelectedVoice: false,
 };

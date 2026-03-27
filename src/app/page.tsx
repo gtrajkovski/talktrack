@@ -7,7 +7,7 @@ import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ResumePrompt } from "@/components/home";
-import { FirstRunModal } from "@/components/onboarding";
+import { FirstRunModal, VoicePickerModal } from "@/components/onboarding";
 import { useTalksStore } from "@/stores/talksStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -21,12 +21,13 @@ export default function HomePage() {
   const router = useRouter();
   const { talks, isLoading, loadTalks, getTalk, addTalk } = useTalksStore();
   const { resumeSession } = useRehearsalStore();
-  const { hasSeenOnboarding, updateSettings, wordsPerMinute } = useSettingsStore();
+  const { hasSeenOnboarding, hasSelectedVoice, updateSettings, wordsPerMinute } = useSettingsStore();
 
   const [incompleteSession, setIncompleteSession] =
     useState<RehearsalSession | null>(null);
   const [incompleteTalk, setIncompleteTalk] = useState<Talk | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
 
   useEffect(() => {
     loadTalks();
@@ -39,10 +40,25 @@ export default function HomePage() {
     }
   }, [isLoading, hasSeenOnboarding]);
 
+  // Show voice picker if onboarding done but voice not selected
+  useEffect(() => {
+    if (!isLoading && hasSeenOnboarding && !hasSelectedVoice && !showOnboarding) {
+      setShowVoicePicker(true);
+    }
+  }, [isLoading, hasSeenOnboarding, hasSelectedVoice, showOnboarding]);
+
   const handleCloseOnboarding = useCallback(() => {
     setShowOnboarding(false);
     updateSettings({ hasSeenOnboarding: true });
-  }, [updateSettings]);
+    // Show voice picker after onboarding if not already selected
+    if (!hasSelectedVoice) {
+      setShowVoicePicker(true);
+    }
+  }, [updateSettings, hasSelectedVoice]);
+
+  const handleCloseVoicePicker = useCallback(() => {
+    setShowVoicePicker(false);
+  }, []);
 
   const handleTryDemo = useCallback(async () => {
     const demoTalk = createDemoTalk(wordsPerMinute);
@@ -162,6 +178,9 @@ export default function HomePage() {
 
       {/* First-run onboarding modal */}
       {showOnboarding && <FirstRunModal onClose={handleCloseOnboarding} />}
+
+      {/* Voice picker modal (after onboarding) */}
+      {showVoicePicker && <VoicePickerModal onClose={handleCloseVoicePicker} />}
     </AppShell>
   );
 }
