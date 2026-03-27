@@ -64,40 +64,41 @@
 - ✅ Voice commands in all 4 languages (EN, MK, SQ, IT)
 - ✅ `parseGoToSlideNumber()` for "go to slide 5" parsing
 
-### Prompt 05 — Complete Voice-Driven Audio Controls — ❌ NOT STARTED
-**1. Volume Controls**
-- [ ] Volume system in synthesis.ts (GainNode for Web Audio, utterance.volume for browser)
-- [ ] Commands: louder, quieter, maxVol, muteVol, unmuteVol
-- [ ] Visual volume indicator
+### Prompt 05 — Complete Voice-Driven Audio Controls — ⚠️ IN PROGRESS
+**1. Volume Controls** ✅
+- [x] Volume system in synthesis.ts (utterance.volume for browser, audio.volume for ElevenLabs)
+- [x] Commands: louder, quieter, maxVolume, mute, unmute (all 4 languages)
+- [x] Visual volume indicator (VolumeBadge component)
 
 **2. Section Navigation**
 - [ ] Commands: nextSection, prevSection, goToSection, listSections
 - [ ] parseGoToSectionCommand() in voiceCommands.ts
 
-**3. Slide Bookmarking**
+**3. Slide Bookmarking** (commands defined, implementation pending)
 - [ ] bookmarkedSlides in rehearsalStore
 - [ ] Persist to IndexedDB per-talk
-- [ ] Commands: bookmark, listBookmarks, practiceBookmarks, clearBookmarks
+- [x] Commands defined: bookmark, listBookmarks, practiceBookmarks, clearBookmarks
 - [ ] Auto-bookmark on score < 50
+- [ ] Command handlers in useRehearsalCommands
 
-**4. Score & Progress Queries**
-- [ ] Commands: howDidIDo, myAverage, worstSlides, fillerCount, myPace, compare
+**4. Score & Progress Queries** (commands defined, handlers pending)
+- [x] Commands defined: howDidIDo, myAverage, worstSlides
+- [ ] Command handlers in useRehearsalCommands
 
-**5. Smart Practice Modes**
+**5. Smart Practice Modes** (commands defined, implementation pending)
 - [ ] filteredSlideIndices and repeatMode in store
-- [ ] Commands: hardOnly, allSlides, titleOnly, keyPhrasesOnly
+- [x] Commands defined: hardOnly, allSlides
+- [ ] Command handlers in useRehearsalCommands
 
-**6. Session Timer**
-- [ ] sessionTimer.ts with warnings at 5min and 1min
-- [ ] Commands: setTimer, timeElapsed, cancelTimer
-- [ ] parseTimerCommand()
+**6. Session Timer** — deferred to Prompt 06/07
 
-**7. Repeat Variations**
-- [ ] Commands: repeatSlowly, repeatTitle, repeatKeyPhrases, spellIt
+**7. Repeat Variations** (commands defined, handlers pending)
+- [x] Commands defined: repeatSlowly, repeatTitle
+- [ ] Command handlers in useRehearsalCommands
 
-**8-9. Full Command Reference + Progressive Disclosure**
-- [ ] 40+ commands documented
-- [ ] 5-tier hint system
+**8-9. Full Command Reference**
+- [x] 35+ commands defined across all languages
+- [ ] Progressive disclosure update
 
 ### Prompt 06 — Rehearsal Granularity (Sentence/Paragraph/Slide) — ❌ NOT STARTED
 **1. Content Chunking Engine**

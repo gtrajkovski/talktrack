@@ -16,7 +16,11 @@
       "Bash(findstr:*)",
       "Bash(npm run dev:*)",
       "Bash(explorer.exe \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")",
-      "Bash(start \"\" \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")"
+      "Bash(start \"\" \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__read_text_file",
+      "Bash(npx eslint:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -2,6 +2,7 @@
 
 import { useRehearsalStore, type AudioState } from "@/stores/rehearsalStore";
 import { SpeedBadge } from "./SpeedBadge";
+import { VolumeBadge } from "./VolumeBadge";
 
 interface StateOrbProps {
   onTap?: () => void;
@@ -100,8 +101,11 @@ export function StateOrb({ onTap }: StateOrbProps) {
         {currentSlideIndex + 1} / {totalSlides}
       </div>
 
-      {/* Speed badge - only visible when modified */}
-      <SpeedBadge />
+      {/* Speed and volume badges - only visible when modified */}
+      <div className="flex gap-2">
+        <SpeedBadge />
+        <VolumeBadge />
+      </div>
     </div>
   );
 }

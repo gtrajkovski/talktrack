@@ -136,6 +136,7 @@ export async function generateSpeech(
 // Active audio element for playback control
 let currentAudio: HTMLAudioElement | null = null;
 let onEndCallback: (() => void) | null = null;
+let currentVolumeLevel = 1.0;
 
 /**
  * Speak text using ElevenLabs TTS
@@ -147,19 +148,26 @@ export async function speak(
   apiKey: string,
   options: {
     speed?: number;
+    volume?: number;
     onEnd?: () => void;
   } = {}
 ): Promise<void> {
   // Stop any current playback
   stop();
 
-  const { speed = 1.0, onEnd } = options;
+  const { speed = 1.0, volume, onEnd } = options;
   onEndCallback = onEnd || null;
+
+  // Update volume level if provided
+  if (volume !== undefined) {
+    currentVolumeLevel = volume;
+  }
 
   try {
     const blobUrl = await generateSpeech(text, voiceId, apiKey, { speed });
 
     currentAudio = new Audio(blobUrl);
+    currentAudio.volume = currentVolumeLevel;
     currentAudio.onended = () => {
       currentAudio = null;
       onEndCallback?.();
@@ -240,4 +248,21 @@ export function clearCache(): void {
  */
 export function getCacheStats(): { entries: number } {
   return { entries: audioCache.size };
+}
+
+/**
+ * Set volume level for current and future playback
+ */
+export function setVolume(vol: number): void {
+  currentVolumeLevel = Math.max(0, Math.min(1, vol));
+  if (currentAudio) {
+    currentAudio.volume = currentVolumeLevel;
+  }
+}
+
+/**
+ * Get current volume level
+ */
+export function getVolume(): number {
+  return currentVolumeLevel;
 }

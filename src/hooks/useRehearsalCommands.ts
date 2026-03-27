@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef } from "react";
 import { useRehearsalStore, DEFAULT_SPEED } from "@/stores/rehearsalStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import {
   getCommands,
   matchCommand,
   parseGoToSlideNumber,
-  type VoiceCommandSet,
 } from "@/lib/i18n/voiceCommands";
 import * as earcons from "@/lib/audio/earcons";
 import * as voicebox from "@/lib/speech/voicebox";
+import * as synthesis from "@/lib/speech/synthesis";
 
 export type RehearsalMode = "listen" | "prompt" | "test" | "completion";
 
@@ -109,6 +109,42 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     }
     return false;
   }, [increaseSpeed, decreaseSpeed, resetSpeed, speakInfoWithFeedback]);
+
+  // Handle volume commands
+  const handleVolumeCommand = useCallback((command: string): boolean => {
+    switch (command) {
+      case "louder": {
+        const newVol = synthesis.increaseVolume();
+        earcons.volumeUp();
+        speakInfoWithFeedback(`Volume ${Math.round(newVol * 100)}%`);
+        return true;
+      }
+      case "quieter": {
+        const newVol = synthesis.decreaseVolume();
+        earcons.volumeDown();
+        speakInfoWithFeedback(`Volume ${Math.round(newVol * 100)}%`);
+        return true;
+      }
+      case "maxVolume": {
+        synthesis.maxVolume();
+        earcons.volumeUp();
+        speakInfoWithFeedback("Maximum volume");
+        return true;
+      }
+      case "mute": {
+        synthesis.mute();
+        earcons.muteToggle();
+        return true;
+      }
+      case "unmute": {
+        synthesis.unmute();
+        earcons.muteToggle();
+        speakInfoWithFeedback("Sound on");
+        return true;
+      }
+    }
+    return false;
+  }, [speakInfoWithFeedback]);
 
   // Handle navigation commands
   const handleNavigationCommand = useCallback((command: string, transcript: string): boolean => {
@@ -258,12 +294,13 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
 
     // Try handlers in order of specificity
     if (handleSpeedCommand(command)) return command;
+    if (handleVolumeCommand(command)) return command;
     if (handleNavigationCommand(command, transcript)) return command;
     if (handleInfoCommand(command)) return command;
     if (handleBaseCommand(command)) return command;
 
     return command;
-  }, [commands, mode, setLastCommand, handleSpeedCommand, handleNavigationCommand, handleInfoCommand, handleBaseCommand]);
+  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBaseCommand]);
 
   /**
    * Check command without executing (for preview/logging)

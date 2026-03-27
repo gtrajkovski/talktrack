@@ -20,6 +20,27 @@ export interface VoiceCommandSet {
   whereAmI: string[];
   howManyLeft: string[];
   timeRemaining: string[];
+  // Volume commands (Prompt 05)
+  louder: string[];
+  quieter: string[];
+  maxVolume: string[];
+  mute: string[];
+  unmute: string[];
+  // Bookmark commands (Prompt 05)
+  bookmark: string[];
+  listBookmarks: string[];
+  practiceBookmarks: string[];
+  clearBookmarks: string[];
+  // Score queries (Prompt 05)
+  howDidIDo: string[];
+  myAverage: string[];
+  worstSlides: string[];
+  // Repeat variations (Prompt 05)
+  repeatSlowly: string[];
+  repeatTitle: string[];
+  // Practice modes (Prompt 05)
+  hardOnly: string[];
+  allSlides: string[];
 }
 
 export const LANGUAGE_LABELS: Record<CommandLanguage, string> = {
@@ -59,6 +80,27 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     whereAmI: ["where am i", "what slide", "current slide"],
     howManyLeft: ["how many left", "how many more", "slides remaining"],
     timeRemaining: ["time remaining", "how long left", "how much time"],
+    // Volume commands
+    louder: ["louder", "volume up", "turn it up"],
+    quieter: ["quieter", "softer", "volume down", "turn it down"],
+    maxVolume: ["max volume", "full volume", "maximum"],
+    mute: ["mute", "silence", "quiet"],
+    unmute: ["unmute", "sound on"],
+    // Bookmark commands
+    bookmark: ["bookmark", "mark this", "save this slide", "flag this"],
+    listBookmarks: ["list bookmarks", "show bookmarks", "my bookmarks"],
+    practiceBookmarks: ["practice bookmarks", "bookmarked slides", "hard slides"],
+    clearBookmarks: ["clear bookmarks", "remove bookmarks"],
+    // Score queries
+    howDidIDo: ["how did i do", "my score", "score"],
+    myAverage: ["my average", "average score", "overall score"],
+    worstSlides: ["worst slides", "hardest slides", "need practice"],
+    // Repeat variations
+    repeatSlowly: ["repeat slowly", "say it slower", "slow repeat"],
+    repeatTitle: ["repeat title", "title again", "slide title"],
+    // Practice modes
+    hardOnly: ["hard only", "hard slides only", "difficult only"],
+    allSlides: ["all slides", "practice all", "full practice"],
   },
 
   // Macedonian (Македонски)
@@ -82,6 +124,27 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     whereAmI: ["каде сум", "кој слајд"],
     howManyLeft: ["колку остануваат", "колку уште"],
     timeRemaining: ["колку време", "преостанато време"],
+    // Volume commands
+    louder: ["погласно", "засили"],
+    quieter: ["потивко", "намали"],
+    maxVolume: ["максимум", "полна јачина"],
+    mute: ["исклучи звук", "тишина"],
+    unmute: ["вклучи звук"],
+    // Bookmark commands
+    bookmark: ["обележи", "маркирај", "зачувај"],
+    listBookmarks: ["покажи обележани", "обележени"],
+    practiceBookmarks: ["вежбај обележани", "тешки слајдови"],
+    clearBookmarks: ["избриши обележани"],
+    // Score queries
+    howDidIDo: ["како ми одеше", "резултат"],
+    myAverage: ["мој просек", "просечен резултат"],
+    worstSlides: ["најтешки слајдови", "треба вежба"],
+    // Repeat variations
+    repeatSlowly: ["повтори бавно", "кажи побавно"],
+    repeatTitle: ["повтори наслов", "наслов"],
+    // Practice modes
+    hardOnly: ["само тешки", "тешки слајдови"],
+    allSlides: ["сите слајдови", "вежбај се"],
   },
 
   // Albanian (Shqip) - Kosovo/Albania
@@ -105,6 +168,27 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     whereAmI: ["ku jam", "cili slajd"],
     howManyLeft: ["sa kanë mbetur", "sa më"],
     timeRemaining: ["sa kohë ka mbetur", "koha e mbetur"],
+    // Volume commands
+    louder: ["më fort", "rrit volumin"],
+    quieter: ["më lehtë", "ul volumin"],
+    maxVolume: ["volum maksimal", "maksimum"],
+    mute: ["hesht", "pa zë"],
+    unmute: ["hiq heshtjen", "me zë"],
+    // Bookmark commands
+    bookmark: ["shëno", "ruaje", "markoje"],
+    listBookmarks: ["trego të shënuarat", "shënime"],
+    practiceBookmarks: ["praktiko të shënuarat", "slajdet e vështira"],
+    clearBookmarks: ["fshi shënimet"],
+    // Score queries
+    howDidIDo: ["si shkova", "rezultati"],
+    myAverage: ["mesatarja ime", "rezultati mesatar"],
+    worstSlides: ["slajdet më të vështira", "duhet praktikë"],
+    // Repeat variations
+    repeatSlowly: ["përsërit ngadalë", "thuaje më ngadalë"],
+    repeatTitle: ["përsërit titullin", "titulli"],
+    // Practice modes
+    hardOnly: ["vetëm të vështirat", "slajdet e vështira"],
+    allSlides: ["të gjitha slajdet", "praktiko të gjitha"],
   },
 
   // Italian (Italiano)
@@ -128,6 +212,27 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     whereAmI: ["dove sono", "quale slide"],
     howManyLeft: ["quante ne mancano", "quanto manca"],
     timeRemaining: ["tempo rimanente", "quanto tempo"],
+    // Volume commands
+    louder: ["più forte", "alza il volume"],
+    quieter: ["più piano", "abbassa il volume"],
+    maxVolume: ["volume massimo", "massimo"],
+    mute: ["muto", "silenzio"],
+    unmute: ["riattiva audio", "audio attivo"],
+    // Bookmark commands
+    bookmark: ["segna", "segnalibro", "salva"],
+    listBookmarks: ["mostra segnati", "segnalibri"],
+    practiceBookmarks: ["pratica segnati", "slide difficili"],
+    clearBookmarks: ["cancella segnalibri"],
+    // Score queries
+    howDidIDo: ["come sono andato", "punteggio"],
+    myAverage: ["media mia", "punteggio medio"],
+    worstSlides: ["slide peggiori", "da ripassare"],
+    // Repeat variations
+    repeatSlowly: ["ripeti lentamente", "dillo più lento"],
+    repeatTitle: ["ripeti titolo", "titolo"],
+    // Practice modes
+    hardOnly: ["solo difficili", "slide difficili"],
+    allSlides: ["tutte le slide", "pratica tutto"],
   },
 };
 
@@ -147,9 +252,22 @@ export function getRecognitionLocale(language: CommandLanguage): string {
 
 // Playback control commands available in all rehearsal modes
 const PLAYBACK_COMMANDS: (keyof VoiceCommandSet)[] = [
+  // Speed controls
   "faster", "slower", "normalSpeed",
+  // Navigation
   "firstSlide", "lastSlide", "goToSlide",
-  "whereAmI", "howManyLeft", "timeRemaining"
+  // Info queries
+  "whereAmI", "howManyLeft", "timeRemaining",
+  // Volume controls
+  "louder", "quieter", "maxVolume", "mute", "unmute",
+  // Bookmarks
+  "bookmark", "listBookmarks", "practiceBookmarks", "clearBookmarks",
+  // Score queries
+  "howDidIDo", "myAverage", "worstSlides",
+  // Repeat variations
+  "repeatSlowly", "repeatTitle",
+  // Practice modes
+  "hardOnly", "allSlides"
 ];
 
 /**

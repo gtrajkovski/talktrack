@@ -318,6 +318,54 @@ export function infoQuery(): void {
   playTone(494, 0.1, 'sine', 0.3);
 }
 
+/**
+ * Volume up - ascending tone
+ * C5 (523Hz), short
+ */
+export function volumeUp(): void {
+  if (!shouldPlay()) return;
+  playTone(523, 0.1, 'sine', 0.4);
+}
+
+/**
+ * Volume down - descending tone
+ * G4 (392Hz), short
+ */
+export function volumeDown(): void {
+  if (!shouldPlay()) return;
+  playTone(392, 0.1, 'sine', 0.4);
+}
+
+/**
+ * Mute/unmute toggle - double click
+ * Two quick tones
+ */
+export function muteToggle(): void {
+  if (!shouldPlay()) return;
+  playTone(440, 0.05, 'sine', 0.3);
+  setTimeout(() => playTone(440, 0.05, 'sine', 0.3), 80);
+}
+
+/**
+ * Bookmark added - positive chirp
+ * G4 → B4 ascending
+ */
+export function bookmarkAdded(): void {
+  if (!shouldPlay()) return;
+  playTone(392, 0.08, 'triangle', 0.4);
+  setTimeout(() => playTone(494, 0.12, 'triangle', 0.5), 60);
+}
+
+/**
+ * Bookmark removed - descending chirp
+ * B4 → G4 descending
+ */
+export function bookmarkRemoved(): void {
+  if (!shouldPlay()) return;
+  playTone(494, 0.08, 'triangle', 0.4);
+  setTimeout(() => playTone(392, 0.1, 'triangle', 0.4), 60);
+}
+
 // ============================================================================
 // CONVENIENCE EXPORT
 // ============================================================================
@@ -342,6 +390,11 @@ export const earcons = {
   speedDown,
   navigationJump,
   infoQuery,
+  volumeUp,
+  volumeDown,
+  muteToggle,
+  bookmarkAdded,
+  bookmarkRemoved,
 };
 
 export default earcons;
