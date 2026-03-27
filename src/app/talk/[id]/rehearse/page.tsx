@@ -13,6 +13,7 @@ import { useTalksStore } from "@/stores/talksStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { sessionStart } from "@/lib/audio/chime";
 import { filterSlidesBySection } from "@/lib/utils/sections";
+import { clearSessionHints } from "@/lib/commandHints";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {
@@ -57,6 +58,7 @@ export default function RehearsalPage() {
     if (talk && !initializedRef.current) {
       initializedRef.current = true;
       const sessionTalk = { ...talk, slides: filteredSlides };
+      clearSessionHints(); // Reset hint tracking for new session
       startSession(sessionTalk, mode).then(() => {
         sessionStart();
         setIsLoading(false);
