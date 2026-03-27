@@ -261,6 +261,63 @@ export function repeat(): void {
   playTone(659, 0.12, 'sine', 0.5);
 }
 
+/**
+ * Speed up - quick ascending two-note chirp
+ * A4 (440Hz) → D5 (587Hz)
+ */
+export function speedUp(): void {
+  if (!shouldPlay()) return;
+  playTone(440, 0.08, 'triangle', 0.4);
+  setTimeout(() => playTone(587, 0.1, 'triangle', 0.5), 60);
+}
+
+/**
+ * Speed down - quick descending two-note chirp
+ * D5 (587Hz) → A4 (440Hz)
+ */
+export function speedDown(): void {
+  if (!shouldPlay()) return;
+  playTone(587, 0.08, 'triangle', 0.4);
+  setTimeout(() => playTone(440, 0.1, 'triangle', 0.5), 60);
+}
+
+/**
+ * Navigation jump - whoosh effect for first/last/goto
+ * Quick frequency sweep
+ */
+export function navigationJump(): void {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.3 * globalVolume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch (e) {
+    console.warn('Earcon playback failed:', e);
+  }
+}
+
+/**
+ * Info query - gentle ping before speaking info
+ * B4 (494Hz), soft
+ */
+export function infoQuery(): void {
+  if (!shouldPlay()) return;
+  playTone(494, 0.1, 'sine', 0.3);
+}
+
 // ============================================================================
 // CONVENIENCE EXPORT
 // ============================================================================
@@ -281,6 +338,10 @@ export const earcons = {
   sessionComplete,
   highScore,
   repeat,
+  speedUp,
+  speedDown,
+  navigationJump,
+  infoQuery,
 };
 
 export default earcons;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRehearsalStore, type AudioState } from "@/stores/rehearsalStore";
+import { SpeedBadge } from "./SpeedBadge";
 
 interface StateOrbProps {
   onTap?: () => void;
@@ -98,6 +99,9 @@ export function StateOrb({ onTap }: StateOrbProps) {
       >
         {currentSlideIndex + 1} / {totalSlides}
       </div>
+
+      {/* Speed badge - only visible when modified */}
+      <SpeedBadge />
     </div>
   );
 }

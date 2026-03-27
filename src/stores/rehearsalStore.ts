@@ -8,6 +8,12 @@ import * as talksDB from "@/lib/db/talks";
 // Audio state for multimodal sync
 export type AudioState = 'idle' | 'speaking' | 'listening' | 'processing' | 'paused' | 'error';
 
+// Speed multiplier constants
+export const MIN_SPEED = 0.5;
+export const MAX_SPEED = 2.0;
+export const DEFAULT_SPEED = 1.0;
+export const SPEED_STEP = 0.1;
+
 interface RehearsalState {
   // Current session
   session: RehearsalSession | null;
@@ -17,6 +23,9 @@ interface RehearsalState {
   currentSlideIndex: number;
   isPlaying: boolean;
   isPaused: boolean;
+
+  // Speed control (multiplier applied on top of settings.speechRate)
+  speedMultiplier: number;
 
   // Current attempt tracking
   currentAttempt: SlideAttempt | null;
@@ -53,6 +62,13 @@ interface RehearsalState {
   isLastSlide: () => boolean;
   isFirstSlide: () => boolean;
 
+  // Speed control actions
+  increaseSpeed: () => number;  // Returns new speed
+  decreaseSpeed: () => number;  // Returns new speed
+  resetSpeed: () => void;
+  setSpeedMultiplier: (speed: number) => void;
+  getEffectiveSpeed: (baseRate: number) => number;  // baseRate * speedMultiplier
+
   // Multimodal state sync actions
   setAudioState: (state: AudioState) => void;
   setLastCommand: (command: string) => void;
@@ -68,6 +84,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   isPlaying: false,
   isPaused: false,
   currentAttempt: null,
+
+  // Speed control initial value
+  speedMultiplier: DEFAULT_SPEED,
 
   // Multimodal state sync initial values
   audioState: 'idle',
@@ -98,6 +117,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPlaying: false,
       isPaused: false,
       currentAttempt: null,
+      speedMultiplier: DEFAULT_SPEED,
     });
   },
 
@@ -129,6 +149,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPlaying: false,
       isPaused: false,
       currentAttempt: null,
+      speedMultiplier: DEFAULT_SPEED,
     });
   },
 
@@ -261,4 +282,33 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   clearTranscript: () => set({ currentTranscript: '' }),
 
   setSpeechSupported: (isSpeechSupported: boolean) => set({ isSpeechSupported }),
+
+  // Speed control actions
+  increaseSpeed: () => {
+    const { speedMultiplier } = get();
+    const newSpeed = Math.min(MAX_SPEED, Math.round((speedMultiplier + SPEED_STEP) * 10) / 10);
+    set({ speedMultiplier: newSpeed });
+    return newSpeed;
+  },
+
+  decreaseSpeed: () => {
+    const { speedMultiplier } = get();
+    const newSpeed = Math.max(MIN_SPEED, Math.round((speedMultiplier - SPEED_STEP) * 10) / 10);
+    set({ speedMultiplier: newSpeed });
+    return newSpeed;
+  },
+
+  resetSpeed: () => {
+    set({ speedMultiplier: DEFAULT_SPEED });
+  },
+
+  setSpeedMultiplier: (speed: number) => {
+    const clampedSpeed = Math.max(MIN_SPEED, Math.min(MAX_SPEED, speed));
+    set({ speedMultiplier: clampedSpeed });
+  },
+
+  getEffectiveSpeed: (baseRate: number) => {
+    const { speedMultiplier } = get();
+    return baseRate * speedMultiplier;
+  },
 }));

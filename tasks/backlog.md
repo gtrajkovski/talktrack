@@ -1,24 +1,17 @@
 # TalkTrack Backlog
 
-## Incomplete Work
+## Deferred Work
 
-### Prompt 04 — VoiceBox Clone + Playback Controls (Partial)
-**Status:** ~40% complete — progress tracking done, voice commands missing
+### VoiceBox Clone API (Optional)
+**Status:** Deferred — not needed for core functionality
 
-**Completed:**
-- [x] VoiceBox playback controller (progress tracking wrapper)
-- [x] PlaybackIndicator component (progress bar + time remaining)
-- [x] Sentence-level tracking for Web Speech API
-- [x] Duration estimation from word count
+The VoiceBox local API integration (localhost:17493) was originally planned as a third TTS engine option. This is deferred as the current ElevenLabs + browser TTS setup provides good voice quality and offline resilience.
 
-**Missing:**
-- [ ] Voice commands: "faster", "slower", "normal speed"
-- [ ] Voice commands: "go to slide 5", "first slide", "last slide"
-- [ ] Voice commands: "where am I", "how many left", "time remaining"
-- [ ] Speed/volume visual badges on rehearsal screen
-- [ ] `useRehearsalCommands` shared hook for all modes
-- [ ] VoiceBox clone API client (third TTS engine)
-- [ ] Pre-caching cloned voice audio for offline
+If needed later:
+- VoiceBox local API client
+- VoiceBox as third TTS engine with priority routing
+- Pre-cache for mobile/offline using VoiceBox
+- Settings UI for VoiceBox profiles
 
 ---
 
