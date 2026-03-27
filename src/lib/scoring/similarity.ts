@@ -50,7 +50,7 @@ export function calculateSimilarity(original: string, spoken: string): number {
   }
 
   // Calculate base score
-  let score = (hits / originalWords.length) * 100;
+  const score = (hits / originalWords.length) * 100;
 
   // Cap at 100
   return Math.min(100, Math.round(score));

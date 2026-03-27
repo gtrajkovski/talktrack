@@ -26,38 +26,25 @@ export default function HomePage() {
   const [incompleteSession, setIncompleteSession] =
     useState<RehearsalSession | null>(null);
   const [incompleteTalk, setIncompleteTalk] = useState<Talk | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  // Track if user has dismissed modals this session
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [voicePickerDismissed, setVoicePickerDismissed] = useState(false);
 
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
 
-  // Show onboarding modal for first-time users
-  useEffect(() => {
-    if (!isLoading && !hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, [isLoading, hasSeenOnboarding]);
-
-  // Show voice picker if onboarding done but voice not selected
-  useEffect(() => {
-    if (!isLoading && hasSeenOnboarding && !hasSelectedVoice && !showOnboarding) {
-      setShowVoicePicker(true);
-    }
-  }, [isLoading, hasSeenOnboarding, hasSelectedVoice, showOnboarding]);
+  // Derive modal visibility from state (no cascading effects)
+  const showOnboarding = !isLoading && !hasSeenOnboarding && !onboardingDismissed;
+  const showVoicePicker = !isLoading && hasSeenOnboarding && !hasSelectedVoice && !showOnboarding && !voicePickerDismissed;
 
   const handleCloseOnboarding = useCallback(() => {
-    setShowOnboarding(false);
+    setOnboardingDismissed(true);
     updateSettings({ hasSeenOnboarding: true });
-    // Show voice picker after onboarding if not already selected
-    if (!hasSelectedVoice) {
-      setShowVoicePicker(true);
-    }
-  }, [updateSettings, hasSelectedVoice]);
+  }, [updateSettings]);
 
   const handleCloseVoicePicker = useCallback(() => {
-    setShowVoicePicker(false);
+    setVoicePickerDismissed(true);
   }, []);
 
   const handleTryDemo = useCallback(async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout";
 import {
@@ -13,7 +13,7 @@ import { useTalksStore } from "@/stores/talksStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { sessionStart } from "@/lib/audio/chime";
 import { filterSlidesBySection } from "@/lib/utils/sections";
-import type { Talk, Slide } from "@/types/talk";
+import type { Slide } from "@/types/talk";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {
@@ -32,40 +32,38 @@ export default function RehearsalPage() {
     markUsedHelp,
   } = useRehearsalStore();
 
-  const [talk, setTalk] = useState<Talk | null>(null);
-  const [filteredSlides, setFilteredSlides] = useState<Slide[]>([]);
-  const [mode, setMode] = useState<RehearsalMode>("listen");
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const initializedRef = useRef(false);
 
-  // Load talk and initialize session
+  // Load talks on mount
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
 
+  // Derive talk, mode, and filtered slides from URL params
+  const talk = useMemo(() => talks.find((t) => t.id === params.id) ?? null, [talks, params.id]);
+  const mode = useMemo(() => {
+    const modeParam = searchParams.get("mode") as RehearsalMode;
+    return ["listen", "prompt", "test"].includes(modeParam) ? modeParam : "listen";
+  }, [searchParams]);
+  const filteredSlides = useMemo(() => {
+    if (!talk) return [];
+    const sectionParam = searchParams.get("section");
+    return filterSlidesBySection(talk.slides, sectionParam);
+  }, [talk, searchParams]);
+
+  // Initialize session once when talk is loaded
   useEffect(() => {
-    const found = talks.find((t) => t.id === params.id);
-    if (found) {
-      setTalk(found);
-      const modeParam = searchParams.get("mode") as RehearsalMode;
-      const sectionParam = searchParams.get("section");
-      const validMode = ["listen", "prompt", "test"].includes(modeParam) ? modeParam : "listen";
-      setMode(validMode);
-
-      // Filter slides by section if specified
-      const slides = filterSlidesBySection(found.slides, sectionParam);
-      setFilteredSlides(slides);
-
-      // Create a modified talk with filtered slides for the session
-      const sessionTalk = { ...found, slides };
-
-      // Start session
-      startSession(sessionTalk, validMode).then(() => {
+    if (talk && !initializedRef.current) {
+      initializedRef.current = true;
+      const sessionTalk = { ...talk, slides: filteredSlides };
+      startSession(sessionTalk, mode).then(() => {
         sessionStart();
         setIsLoading(false);
       });
     }
-  }, [talks, params.id, searchParams, startSession]);
+  }, [talk, filteredSlides, mode, startSession]);
 
   // Cleanup on unmount
   useEffect(() => {

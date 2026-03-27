@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppShell, Header } from "@/components/layout";
@@ -10,7 +10,6 @@ import { SectionSelector } from "@/components/talk";
 import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
 import { getSections, hasMultipleSections } from "@/lib/utils/sections";
-import type { Talk } from "@/types/talk";
 
 const modes = [
   {
@@ -36,16 +35,15 @@ const modes = [
 export default function TalkDetailPage() {
   const params = useParams();
   const { talks, loadTalks } = useTalksStore();
-  const [talk, setTalk] = useState<Talk | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTalks();
   }, [loadTalks]);
 
-  useEffect(() => {
-    const found = talks.find((t) => t.id === params.id);
-    if (found) setTalk(found);
+  // Derive talk from talks array (no cascading setState)
+  const talk = useMemo(() => {
+    return talks.find((t) => t.id === params.id) ?? null;
   }, [talks, params.id]);
 
   // Get sections for this talk

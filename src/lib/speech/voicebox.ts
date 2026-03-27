@@ -109,7 +109,7 @@ function getProgress(): PlaybackProgress {
   }
 
   let currentTime: number;
-  let duration = estimatedDuration;
+  const duration = estimatedDuration;
   let isAccurate = false;
 
   if (isPaused) {
