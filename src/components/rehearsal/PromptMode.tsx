@@ -8,7 +8,9 @@ import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
 import { TimerOverlay } from "./TimerOverlay";
-import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
+import { isSpeaking } from "@/lib/speech/synthesis";
+import * as voicebox from "@/lib/speech/voicebox";
+import { PlaybackIndicator } from "./PlaybackIndicator";
 import * as earcons from "@/lib/audio/earcons";
 import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio/recorder";
 import { calculateSimilarity } from "@/lib/scoring/similarity";
@@ -130,7 +132,7 @@ export function PromptMode({
       if (isListeningRef.current && isMountedRef.current && !silenceNudgeShownRef.current) {
         silenceNudgeShownRef.current = true;
         earcons.errorRetry();
-        speak("Still listening — take your time, or say next to move on", {
+        voicebox.play("Still listening — take your time, or say next to move on", {
           rate: 0.9,
           onEnd: () => {
             if (isMountedRef.current) startListening();
@@ -277,7 +279,7 @@ export function PromptMode({
     setStatus("playing");
     setAudioState("speaking");
 
-    speak(currentSlide.title, {
+    voicebox.play(currentSlide.title, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -296,7 +298,7 @@ export function PromptMode({
     setAudioState("speaking");
     earcons.revealAnswer();
 
-    speak(currentSlide.notes, {
+    voicebox.play(currentSlide.notes, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -307,13 +309,13 @@ export function PromptMode({
   }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
 
   const handleRepeat = useCallback(() => {
-    stop();
+    voicebox.stop();
     earcons.repeat();
     speakTitle();
   }, [speakTitle]);
 
   const handleNext = useCallback(async () => {
-    stop();
+    voicebox.stop();
     stopListening();
     setAudioState("idle");
     clearTranscript();
@@ -338,7 +340,7 @@ export function PromptMode({
   }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex, setAudioState, clearTranscript]);
 
   const handleBack = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     setAudioState("idle");
     clearTranscript();
@@ -347,7 +349,7 @@ export function PromptMode({
   }, [onPrev, stopListening, setAudioState, clearTranscript]);
 
   const handleStop = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     earcons.micOff();
     setStatus("idle");
@@ -383,7 +385,7 @@ export function PromptMode({
   useEffect(() => {
     speakTitle();
     return () => {
-      stop();
+      voicebox.stop();
       stopListening();
     };
   }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -417,6 +419,11 @@ export function PromptMode({
             }
           }}
         />
+
+        {/* Playback progress (visible during TTS) */}
+        {status === "playing" && (
+          <PlaybackIndicator compact className="w-48 mt-3" />
+        )}
 
         {/* Live transcript below orb */}
         {transcript && (

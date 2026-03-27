@@ -4,7 +4,9 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
-import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
+import { PlaybackIndicator } from "./PlaybackIndicator";
+import { isSpeaking } from "@/lib/speech/synthesis";
+import * as voicebox from "@/lib/speech/voicebox";
 import * as earcons from "@/lib/audio/earcons";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -188,7 +190,7 @@ export function ListenMode({
     setStatus("playing");
     setAudioState("speaking");
 
-    speak(currentSlide.notes, {
+    voicebox.play(currentSlide.notes, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -215,7 +217,7 @@ export function ListenMode({
   }, [currentSlide.notes, speechRate, voiceName, autoAdvance, autoAdvanceDelay, isLastSlide, onComplete, onNext, setAudioState, clearAutoAdvanceTimer, startListening]);
 
   const handleRepeat = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     earcons.repeat();
@@ -223,7 +225,7 @@ export function ListenMode({
   }, [speakSlide, stopListening, clearAutoAdvanceTimer]);
 
   const handleNext = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     setAudioState("idle");
@@ -236,7 +238,7 @@ export function ListenMode({
   }, [isLastSlide, onComplete, onNext, stopListening, clearAutoAdvanceTimer, setAudioState]);
 
   const handleBack = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     setAudioState("idle");
@@ -245,7 +247,7 @@ export function ListenMode({
   }, [onPrev, stopListening, clearAutoAdvanceTimer, setAudioState]);
 
   const handlePause = useCallback(() => {
-    stop();
+    voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     earcons.micOff();
@@ -282,7 +284,7 @@ export function ListenMode({
   useEffect(() => {
     speakSlide();
     return () => {
-      stop();
+      voicebox.stop();
       stopListening();
       clearAutoAdvanceTimer();
     };
@@ -297,7 +299,7 @@ export function ListenMode({
       <h2 className="text-xl font-bold text-center mb-4 px-4">{currentSlide.title}</h2>
 
       {/* Glanceable state indicator */}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center mb-2">
         <StateOrb
           onTap={() => {
             // Toggle pause/resume
@@ -309,6 +311,9 @@ export function ListenMode({
           }}
         />
       </div>
+
+      {/* Playback progress */}
+      <PlaybackIndicator showSentences className="px-4 mb-4" />
 
       {/* Notes Display */}
       <div className="flex-1 overflow-y-auto mb-4">
