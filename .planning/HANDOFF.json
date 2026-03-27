@@ -1,28 +1,37 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-27T00:54:30.333Z",
-  "phase": "complete",
-  "phase_name": "all-features-done",
-  "status": "complete",
+  "timestamp": "2026-03-27T01:48:53.800Z",
+  "phase": "ux-overhaul",
+  "phase_name": "Voice-First UX Overhaul (6 Features)",
+  "status": "completed",
   "completed_tasks": [
-    {"id": 1, "name": "Phase 1.1: Session Resume", "status": "done"},
-    {"id": 2, "name": "Phase 1.2: Export Stats CSV", "status": "done"},
-    {"id": 3, "name": "Phase 1.3: Better Onboarding", "status": "done"},
-    {"id": 4, "name": "Phase 2: Recording Playback (infrastructure + integration)", "status": "done"},
-    {"id": 5, "name": "Phase 3: Progress Heatmap", "status": "done"},
-    {"id": 6, "name": "Phase 4: Countdown Timer", "status": "done"},
-    {"id": 7, "name": "Phase 5: Multi-language Commands (EN/MK/SQ/IT)", "status": "done"},
-    {"id": 8, "name": "Phase 6: Slide Grouping", "status": "done"}
+    {"id": 1, "name": "Feature 4: Multimodal state sync (audioState in store)", "status": "done"},
+    {"id": 2, "name": "Feature 1: Earcons feedback system (11 sounds)", "status": "done"},
+    {"id": 3, "name": "Feature 2: StateOrb glanceable UI (120px pulsing circle)", "status": "done"},
+    {"id": 4, "name": "Feature 3: Progressive command hints", "status": "done"},
+    {"id": 5, "name": "Feature 5: Patience mode + error recovery (15s nudge, exponential backoff)", "status": "done"},
+    {"id": 6, "name": "Feature 6: Positive reinforcement + streaks", "status": "done"}
   ],
   "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [],
-  "decisions": [
-    {"decision": "30-day auto-delete for recordings", "rationale": "Save storage space", "phase": "2"},
-    {"decision": "Languages: EN, MK, SQ, IT", "rationale": "User's spoken languages", "phase": "5"},
-    {"decision": "H1=sections, H2=slides in markdown", "rationale": "Natural document hierarchy", "phase": "6"}
+  "human_actions_pending": [
+    {"action": "Run npm run dev and test all modes", "context": "Manual testing needed for earcons, StateOrb animations, voice recognition", "blocking": false},
+    {"action": "Commit all changes", "context": "17 files modified/created but not committed", "blocking": false}
   ],
-  "uncommitted_files": [],
-  "next_action": "Test all features, then deploy. No active development work remaining.",
-  "context_notes": "All 8 planned features implemented in single session. MVP was already complete before session. Ready for user testing and production deployment."
+  "decisions": [
+    {"decision": "Reordered features to 4→1→2→3→5→6", "rationale": "audioState in store is foundation for earcons and StateOrb"},
+    {"decision": "Match last 3 words instead of 5", "rationale": "Reduces false positives like 'the next thing I want to cover'"},
+    {"decision": "15s silence nudge delay", "rationale": "More patient than browser default 5s"},
+    {"decision": "300ms iOS buffer after TTS", "rationale": "iOS needs more time between synthesis and recognition"}
+  ],
+  "uncommitted_files": [
+    "src/lib/audio/earcons.ts",
+    "src/components/rehearsal/StateOrb.tsx",
+    "src/hooks/useEarconSync.ts",
+    "src/lib/commandHints.ts",
+    "src/lib/db/hints.ts",
+    "src/lib/db/streaks.ts"
+  ],
+  "next_action": "Commit all changes with 'feat: voice-first UX overhaul (6 features)'",
+  "context_notes": "All 6 UX features implemented. TypeScript compiles clean. Pre-existing lint warning in page.tsx unrelated to this work."
 }
