@@ -8,21 +8,70 @@ export interface ParseResult {
   title: string;
 }
 
+/**
+ * Parse markdown into slides with sections.
+ *
+ * Structure:
+ * - `# Heading` (H1) = Section marker
+ * - `## Heading` (H2) = Slide marker
+ * - Content below ## = Slide notes
+ */
 export function parseMarkdown(markdown: string, wordsPerMinute: number = 100): ParseResult {
   const slides: Slide[] = [];
+  let currentSectionId: string | undefined;
+  let currentSectionName: string | undefined;
+  let documentTitle = "";
 
-  // Split by ## headings (h2)
-  const sections = markdown.split(/(?=^##\s+)/m);
+  // Split by headings (# or ##)
+  const parts = markdown.split(/(?=^#{1,2}\s+)/m);
 
-  for (const section of sections) {
-    const trimmed = section.trim();
+  for (const part of parts) {
+    const trimmed = part.trim();
     if (!trimmed) continue;
 
-    // Check if starts with ## heading
-    const headingMatch = trimmed.match(/^##\s+(.+)$/m);
+    // Check for H1 (section)
+    const h1Match = trimmed.match(/^#\s+(.+)$/m);
+    if (h1Match) {
+      const heading = h1Match[1].trim();
 
-    if (headingMatch) {
-      const title = headingMatch[1].trim();
+      // First H1 is document title, subsequent are sections
+      if (!documentTitle) {
+        documentTitle = heading;
+      }
+
+      // Start new section
+      currentSectionId = nanoid();
+      currentSectionName = heading;
+
+      // Check if there's content after the H1 that isn't an H2
+      const afterH1 = trimmed.replace(/^#\s+.+\n?/, "").trim();
+      if (afterH1 && !afterH1.startsWith("##")) {
+        // Parse as slide content directly under section
+        const lines = afterH1.split("\n");
+        const title = lines[0].trim();
+        const notes = lines.length > 1 ? lines.slice(1).join("\n").trim() : title;
+
+        if (title) {
+          slides.push({
+            id: nanoid(),
+            index: slides.length,
+            title,
+            notes,
+            wordCount: countWords(notes),
+            estimatedSeconds: estimateSeconds(notes, wordsPerMinute),
+            timesRehearsed: 0,
+            sectionId: currentSectionId,
+            sectionName: currentSectionName,
+          });
+        }
+      }
+      continue;
+    }
+
+    // Check for H2 (slide)
+    const h2Match = trimmed.match(/^##\s+(.+)$/m);
+    if (h2Match) {
+      const title = h2Match[1].trim();
       const notes = trimmed.replace(/^##\s+.+\n?/, "").trim() || title;
 
       slides.push({
@@ -33,34 +82,13 @@ export function parseMarkdown(markdown: string, wordsPerMinute: number = 100): P
         wordCount: countWords(notes),
         estimatedSeconds: estimateSeconds(notes, wordsPerMinute),
         timesRehearsed: 0,
+        sectionId: currentSectionId,
+        sectionName: currentSectionName,
       });
-    } else if (slides.length === 0) {
-      // First block without heading - check for h1 as title
-      const h1Match = trimmed.match(/^#\s+(.+)$/m);
-      if (h1Match) {
-        // Skip document title, look for content after it
-        const afterH1 = trimmed.replace(/^#\s+.+\n?/, "").trim();
-        if (afterH1) {
-          // Parse the rest as plain text
-          const lines = afterH1.split("\n");
-          const firstLine = lines[0].trim();
-          const rest = lines.slice(1).join("\n").trim();
-
-          slides.push({
-            id: nanoid(),
-            index: 0,
-            title: firstLine,
-            notes: rest || firstLine,
-            wordCount: countWords(rest || firstLine),
-            estimatedSeconds: estimateSeconds(rest || firstLine, wordsPerMinute),
-            timesRehearsed: 0,
-          });
-        }
-      }
     }
   }
 
-  const title = slides.length > 0 ? slides[0].title.slice(0, 50) : "Untitled";
+  const title = documentTitle || (slides.length > 0 ? slides[0].title.slice(0, 50) : "Untitled");
 
   return { slides, title };
 }

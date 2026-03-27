@@ -14,7 +14,9 @@
       "Bash(start cmd /c \"npx next dev -p 3006\")",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(explorer.exe \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")",
+      "Bash(start \"\" \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")"
     ]
   }
 }

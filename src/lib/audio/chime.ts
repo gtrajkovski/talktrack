@@ -61,3 +61,14 @@ export function errorTone(): void {
   playTone(300, 0.2, "sawtooth", 0.15);
   setTimeout(() => playTone(200, 0.3, "sawtooth", 0.1), 150);
 }
+
+export function timerWarning(): void {
+  // Quick tick sound for timer warning
+  playTone(800, 0.08, "sine", 0.15);
+}
+
+export function timerExpired(): void {
+  // Two-tone alert when time runs out
+  playTone(600, 0.15, "triangle", 0.25);
+  setTimeout(() => playTone(400, 0.2, "triangle", 0.2), 150);
+}

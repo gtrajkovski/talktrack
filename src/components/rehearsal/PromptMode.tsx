@@ -7,27 +7,26 @@ import { SlideHeader } from "./SlideHeader";
 import { VoiceStatus } from "./VoiceStatus";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
+import { TimerOverlay } from "./TimerOverlay";
 import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
 import { slideTransition } from "@/lib/audio/chime";
+import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio/recorder";
+import { calculateSimilarity } from "@/lib/scoring/similarity";
+import { recordSlideScore } from "@/lib/db/talks";
+import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { Slide } from "@/types/talk";
 
 interface PromptModeProps {
   slides: Slide[];
   currentIndex: number;
+  sessionId: string;
+  talkId: string;
   onNext: () => void;
   onPrev: () => void;
   onComplete: () => void;
   onUsedHelp: () => void;
 }
-
-// Voice command keywords - use exact word matching to avoid false positives
-const COMMANDS = {
-  next: ["next", "next slide", "forward", "continue", "skip", "move on"],
-  back: ["back", "previous", "go back", "last slide", "before"],
-  repeat: ["repeat", "again", "say that again", "one more time", "replay"],
-  reveal: ["reveal", "show me", "tell me", "what is it", "answer"],
-};
 
 // Detect iOS for speech overlap workaround
 const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -35,12 +34,17 @@ const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(naviga
 export function PromptMode({
   slides,
   currentIndex,
+  sessionId,
+  talkId,
   onNext,
   onPrev,
   onComplete,
   onUsedHelp,
 }: PromptModeProps) {
-  const { speechRate, voiceName } = useSettingsStore();
+  const { speechRate, voiceName, showTimer, timerWarningSeconds, commandLanguage } = useSettingsStore();
+  const canRecord = isRecordingSupported();
+  const commands = getCommands(commandLanguage);
+  const recognitionLocale = getRecognitionLocale(commandLanguage);
   const [status, setStatus] = useState<"playing" | "listening" | "idle" | "error">("idle");
   const [revealed, setRevealed] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -49,33 +53,25 @@ export function PromptMode({
   const isMountedRef = useRef(true);
   const lastCommandTimeRef = useRef(0);
   const errorRetryCountRef = useRef(0);
+  const transcriptRef = useRef("");
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
   const progress = ((currentIndex + 1) / slides.length) * 100;
 
-  // Check for voice commands in transcript - use word boundary matching to avoid false positives
+  // Check for voice commands in transcript using localized command set
   const checkCommand = useCallback((text: string): string | null => {
     // Debounce: ignore commands within 500ms of last command
     const now = Date.now();
     if (now - lastCommandTimeRef.current < 500) return null;
 
-    const words = text.toLowerCase().trim().split(/\s+/).slice(-5);
-    const phrase = words.join(" ");
-
-    for (const [command, phrases] of Object.entries(COMMANDS)) {
-      for (const p of phrases) {
-        // Use word boundary matching: phrase must end with the command phrase
-        // This prevents "I didn't reveal" from triggering "reveal"
-        if (phrase === p || phrase.endsWith(" " + p)) {
-          lastCommandTimeRef.current = now;
-          return command;
-        }
-      }
+    const command = matchCommand(text, commands, "prompt");
+    if (command) {
+      lastCommandTimeRef.current = now;
     }
-    return null;
-  }, []);
+    return command;
+  }, [commands]);
 
   // Stop speech recognition
   const stopListening = useCallback(() => {
@@ -116,11 +112,16 @@ export function PromptMode({
 
     stopListening();
 
+    // Start audio recording alongside speech recognition
+    if (canRecord) {
+      startRecording();
+    }
+
     try {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "en-US";
+      recognition.lang = recognitionLocale;
 
       recognition.onresult = (event) => {
         if (!isMountedRef.current) return;
@@ -131,6 +132,7 @@ export function PromptMode({
           fullTranscript += event.results[i][0].transcript;
         }
         setTranscript(fullTranscript);
+        transcriptRef.current = fullTranscript;
 
         const last = event.results[event.results.length - 1];
         if (last.isFinal) {
@@ -211,12 +213,13 @@ export function PromptMode({
       console.warn("Failed to start speech recognition:", e);
       setStatus("error");
     }
-  }, [checkCommand, stopListening]);
+  }, [checkCommand, stopListening, recognitionLocale, canRecord]);
 
   // Speak the slide title and start listening
   const speakTitle = useCallback(() => {
     setRevealed(false);
     setTranscript("");
+    transcriptRef.current = "";
     stopListening();
     setStatus("playing");
 
@@ -249,16 +252,28 @@ export function PromptMode({
     speakTitle();
   }, [speakTitle]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     stop();
     stopListening();
+
+    // Calculate and record score if user spoke something
+    if (transcriptRef.current) {
+      const score = calculateSimilarity(currentSlide.notes, transcriptRef.current);
+      await recordSlideScore(talkId, currentSlide.id, score, "prompt");
+    }
+
+    // Save recording before advancing
+    if (canRecord) {
+      await saveRecording(sessionId, talkId, currentSlide.id, currentIndex);
+    }
+
     if (isLastSlide) {
       onComplete();
     } else {
       slideTransition();
       onNext();
     }
-  }, [isLastSlide, onComplete, onNext, stopListening]);
+  }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex]);
 
   const handleBack = useCallback(() => {
     stop();
@@ -300,6 +315,14 @@ export function PromptMode({
       />
 
       <VoiceStatus status={status} />
+
+      {showTimer && (
+        <TimerOverlay
+          totalSeconds={currentSlide.estimatedSeconds}
+          warningSeconds={timerWarningSeconds}
+          isActive={status === "listening"}
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto mb-6">
         {revealed ? (

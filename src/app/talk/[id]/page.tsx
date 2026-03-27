@@ -6,8 +6,10 @@ import Link from "next/link";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { SectionSelector } from "@/components/talk";
 import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
+import { getSections, hasMultipleSections } from "@/lib/utils/sections";
 import type { Talk } from "@/types/talk";
 
 const modes = [
@@ -35,6 +37,7 @@ export default function TalkDetailPage() {
   const params = useParams();
   const { talks, loadTalks } = useTalksStore();
   const [talk, setTalk] = useState<Talk | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTalks();
@@ -44,6 +47,16 @@ export default function TalkDetailPage() {
     const found = talks.find((t) => t.id === params.id);
     if (found) setTalk(found);
   }, [talks, params.id]);
+
+  // Get sections for this talk
+  const sections = talk ? getSections(talk.slides) : [];
+  const showSections = talk ? hasMultipleSections(talk.slides) : false;
+
+  // Build rehearsal URL with optional section param
+  const getRehearsalUrl = (modeId: string) => {
+    const base = `/talk/${talk?.id}/rehearse?mode=${modeId}`;
+    return selectedSectionId ? `${base}&section=${selectedSectionId}` : base;
+  };
 
   if (!talk) {
     return (
@@ -89,12 +102,23 @@ export default function TalkDetailPage() {
           </div>
         </Card>
 
+        {/* Section Selection (if multiple sections exist) */}
+        {showSections && (
+          <Card>
+            <SectionSelector
+              sections={sections}
+              selectedSectionId={selectedSectionId}
+              onSelect={setSelectedSectionId}
+            />
+          </Card>
+        )}
+
         {/* Mode Selection */}
         <div>
           <h2 className="text-lg font-bold mb-3">Start Rehearsal</h2>
           <div className="space-y-3">
             {modes.map((mode) => (
-              <Link key={mode.id} href={`/talk/${talk.id}/rehearse?mode=${mode.id}`}>
+              <Link key={mode.id} href={getRehearsalUrl(mode.id)}>
                 <Card className="active:scale-[0.98] transition-transform">
                   <div className="flex items-center gap-4">
                     <div

@@ -9,6 +9,7 @@ import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
 import { generateFullCsv, downloadCsv } from "@/lib/utils/exportCsv";
 import { getSessionsByTalk } from "@/lib/db/sessions";
+import { ProgressHeatmap } from "@/components/stats";
 import type { Talk } from "@/types/talk";
 import type { RehearsalSession } from "@/types/session";
 
@@ -103,6 +104,12 @@ export default function StatsPage() {
               <div className="text-sm text-text-dim">Est. Duration</div>
             </div>
           </div>
+        </Card>
+
+        {/* Progress Heatmap */}
+        <Card>
+          <h2 className="font-bold mb-3">Progress Heatmap</h2>
+          <ProgressHeatmap slides={talk.slides} />
         </Card>
 
         {/* Per-slide breakdown */}

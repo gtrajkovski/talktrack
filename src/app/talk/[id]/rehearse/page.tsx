@@ -12,7 +12,8 @@ import {
 import { useTalksStore } from "@/stores/talksStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { sessionStart } from "@/lib/audio/chime";
-import type { Talk } from "@/types/talk";
+import { filterSlidesBySection } from "@/lib/utils/sections";
+import type { Talk, Slide } from "@/types/talk";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {
@@ -22,6 +23,7 @@ export default function RehearsalPage() {
 
   const { talks, loadTalks } = useTalksStore();
   const {
+    session,
     startSession,
     endSession,
     currentSlideIndex,
@@ -31,9 +33,11 @@ export default function RehearsalPage() {
   } = useRehearsalStore();
 
   const [talk, setTalk] = useState<Talk | null>(null);
+  const [filteredSlides, setFilteredSlides] = useState<Slide[]>([]);
   const [mode, setMode] = useState<RehearsalMode>("listen");
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
 
   // Load talk and initialize session
   useEffect(() => {
@@ -45,11 +49,19 @@ export default function RehearsalPage() {
     if (found) {
       setTalk(found);
       const modeParam = searchParams.get("mode") as RehearsalMode;
+      const sectionParam = searchParams.get("section");
       const validMode = ["listen", "prompt", "test"].includes(modeParam) ? modeParam : "listen";
       setMode(validMode);
 
+      // Filter slides by section if specified
+      const slides = filterSlidesBySection(found.slides, sectionParam);
+      setFilteredSlides(slides);
+
+      // Create a modified talk with filtered slides for the session
+      const sessionTalk = { ...found, slides };
+
       // Start session
-      startSession(found, validMode).then(() => {
+      startSession(sessionTalk, validMode).then(() => {
         sessionStart();
         setIsLoading(false);
       });
@@ -64,9 +76,13 @@ export default function RehearsalPage() {
   }, [endSession]);
 
   const handleComplete = useCallback(() => {
+    // Capture sessionId before endSession clears it
+    if (session) {
+      setCompletedSessionId(session.id);
+    }
     setIsComplete(true);
     endSession();
-  }, [endSession]);
+  }, [endSession, session]);
 
   const handleExit = () => {
     endSession();
@@ -89,6 +105,7 @@ export default function RehearsalPage() {
         slidesCompleted={talk.slides.length}
         totalSlides={talk.slides.length}
         mode={mode}
+        sessionId={completedSessionId}
       />
     );
   }
@@ -130,7 +147,7 @@ export default function RehearsalPage() {
       <div className="flex-1 flex flex-col p-4">
         {mode === "listen" && (
           <ListenMode
-            slides={talk.slides}
+            slides={filteredSlides}
             currentIndex={currentSlideIndex}
             onNext={nextSlide}
             onPrev={prevSlide}
@@ -138,10 +155,12 @@ export default function RehearsalPage() {
           />
         )}
 
-        {mode === "prompt" && (
+        {mode === "prompt" && session && (
           <PromptMode
-            slides={talk.slides}
+            slides={filteredSlides}
             currentIndex={currentSlideIndex}
+            sessionId={session.id}
+            talkId={talk.id}
             onNext={nextSlide}
             onPrev={prevSlide}
             onComplete={handleComplete}
@@ -149,10 +168,12 @@ export default function RehearsalPage() {
           />
         )}
 
-        {mode === "test" && (
+        {mode === "test" && session && (
           <TestMode
-            slides={talk.slides}
+            slides={filteredSlides}
             currentIndex={currentSlideIndex}
+            sessionId={session.id}
+            talkId={talk.id}
             onNext={nextSlide}
             onPrev={prevSlide}
             onComplete={handleComplete}

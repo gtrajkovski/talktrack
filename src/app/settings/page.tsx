@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { VoiceSelector } from "@/components/settings";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { LANGUAGE_LABELS, type CommandLanguage } from "@/lib/i18n/voiceCommands";
 
 export default function SettingsPage() {
   const settings = useSettingsStore();
@@ -73,6 +74,26 @@ export default function SettingsPage() {
               </button>
             </div>
 
+            {/* Command Language */}
+            {settings.enableVoiceCommands && (
+              <div className="pl-4 border-l-2 border-surface-light">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-text-dim">Command Language</span>
+                  <select
+                    value={settings.commandLanguage}
+                    onChange={(e) => settings.updateSettings({ commandLanguage: e.target.value as CommandLanguage })}
+                    className="bg-surface-light text-text rounded-lg px-3 py-2 text-sm min-w-[120px]"
+                  >
+                    {(Object.keys(LANGUAGE_LABELS) as CommandLanguage[]).map((lang) => (
+                      <option key={lang} value={lang}>
+                        {LANGUAGE_LABELS[lang]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             {/* Auto Advance */}
             <div className="flex items-center justify-between">
               <div>
@@ -111,6 +132,49 @@ export default function SettingsPage() {
                   step="0.5"
                   value={settings.autoAdvanceDelay}
                   onChange={(e) => settings.updateSettings({ autoAdvanceDelay: parseFloat(e.target.value) })}
+                  className="w-full accent-accent h-2"
+                />
+              </div>
+            )}
+
+            {/* Countdown Timer */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Countdown Timer</div>
+                <div className="text-sm text-text-dim">
+                  Show time pressure during practice
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ showTimer: !settings.showTimer })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.showTimer ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.showTimer ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {/* Timer Warning Threshold */}
+            {settings.showTimer && (
+              <div className="pl-4 border-l-2 border-surface-light">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-text-dim">Warning at</span>
+                  <span className="font-medium">{settings.timerWarningSeconds}s remaining</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="30"
+                  step="5"
+                  value={settings.timerWarningSeconds}
+                  onChange={(e) => settings.updateSettings({ timerWarningSeconds: parseInt(e.target.value) })}
                   className="w-full accent-accent h-2"
                 />
               </div>
