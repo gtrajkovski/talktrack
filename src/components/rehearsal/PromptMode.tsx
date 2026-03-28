@@ -18,6 +18,7 @@ import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voic
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
+import { useChunkNavigation } from "@/hooks/useChunkNavigation";
 import type { Slide } from "@/types/talk";
 
 interface PromptModeProps {
@@ -59,6 +60,22 @@ export function PromptMode({
 
   // Sync earcons with settings and play on state transitions
   useEarconSync();
+
+  // Chunk-aware navigation
+  const {
+    currentContent,
+    currentCue,
+    currentLabel,
+    progress: chunkProgress,
+    positionLabel,
+    isChunkMode,
+    isLastChunk,
+    isFirstChunk,
+    onNextChunk,
+    onPrevChunk,
+    granularity,
+  } = useChunkNavigation();
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -71,7 +88,9 @@ export function PromptMode({
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
-  const progress = ((currentIndex + 1) / slides.length) * 100;
+  const progress = isChunkMode ? chunkProgress : ((currentIndex + 1) / slides.length) * 100;
+  const isAtEnd = isChunkMode ? isLastChunk : isLastSlide;
+  const isAtStart = isChunkMode ? isFirstChunk : isFirstSlide;
 
   // Check for voice commands in transcript using localized command set
   const checkCommand = useCallback((text: string): string | null => {
@@ -274,8 +293,8 @@ export function PromptMode({
     startListeningRef.current = startListening;
   });
 
-  // Speak the slide title and start listening
-  const speakTitle = useCallback(() => {
+  // Speak the prompt (cue, label, or title based on granularity) and start listening
+  const speakPrompt = useCallback(() => {
     setRevealed(false);
     setTranscript("");
     clearTranscript();
@@ -284,7 +303,17 @@ export function PromptMode({
     setStatus("playing");
     setAudioState("speaking");
 
-    voicebox.play(currentSlide.title, {
+    // Determine what to speak based on granularity
+    let promptText: string;
+    if (granularity === "sentence" && currentCue) {
+      promptText = currentCue;  // First 3 words as cue
+    } else if (granularity === "paragraph" && currentLabel) {
+      promptText = `${currentSlide.title}, ${currentLabel}`;  // "Title, Paragraph 1"
+    } else {
+      promptText = currentSlide.title;  // Slide mode: full title
+    }
+
+    voicebox.play(promptText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -292,7 +321,7 @@ export function PromptMode({
         startListening();
       },
     });
-  }, [currentSlide.title, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentSlide.title, currentCue, currentLabel, granularity, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
 
   const handleReveal = useCallback(() => {
     stopListening();
@@ -303,7 +332,10 @@ export function PromptMode({
     setAudioState("speaking");
     earcons.revealAnswer();
 
-    voicebox.play(currentSlide.notes, {
+    // Reveal current chunk content in chunk mode, otherwise full notes
+    const revealText = isChunkMode ? currentContent : currentSlide.notes;
+
+    voicebox.play(revealText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -311,13 +343,13 @@ export function PromptMode({
         startListening();
       },
     });
-  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
+  }, [currentSlide.notes, currentContent, isChunkMode, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
     earcons.repeat();
-    speakTitle();
-  }, [speakTitle]);
+    speakPrompt();
+  }, [speakPrompt]);
 
   const handleNext = useCallback(async () => {
     voicebox.stop();
@@ -326,8 +358,9 @@ export function PromptMode({
     clearTranscript();
 
     // Calculate and record score if user spoke something
+    const contentToScore = isChunkMode ? currentContent : currentSlide.notes;
     if (transcriptRef.current) {
-      const score = calculateSimilarity(currentSlide.notes, transcriptRef.current);
+      const score = calculateSimilarity(contentToScore, transcriptRef.current);
       await recordSlideScore(talkId, currentSlide.id, score, "prompt");
     }
 
@@ -336,22 +369,35 @@ export function PromptMode({
       await saveRecording(sessionId, talkId, currentSlide.id, currentIndex);
     }
 
-    if (isLastSlide) {
-      onComplete();
+    if (isChunkMode) {
+      if (isLastChunk) {
+        onComplete();
+      } else {
+        onNextChunk();
+      }
     } else {
-      earcons.slideAdvance();
-      onNext();
+      if (isLastSlide) {
+        onComplete();
+      } else {
+        earcons.slideAdvance();
+        onNext();
+      }
     }
-  }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex, setAudioState, clearTranscript]);
+  }, [isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentContent, currentIndex, setAudioState, clearTranscript]);
 
   const handleBack = useCallback(() => {
     voicebox.stop();
     stopListening();
     setAudioState("idle");
     clearTranscript();
-    earcons.slideBack();
-    onPrev();
-  }, [onPrev, stopListening, setAudioState, clearTranscript]);
+
+    if (isChunkMode && !isFirstChunk) {
+      onPrevChunk();
+    } else {
+      earcons.slideBack();
+      onPrev();
+    }
+  }, [isChunkMode, isFirstChunk, onPrev, onPrevChunk, stopListening, setAudioState, clearTranscript]);
 
   const handleStop = useCallback(() => {
     voicebox.stop();
@@ -391,7 +437,7 @@ export function PromptMode({
   // Initial title speak on slide change
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional TTS init
-    speakTitle();
+    speakPrompt();
     return () => {
       voicebox.stop();
       stopListening();
@@ -402,8 +448,13 @@ export function PromptMode({
     <div className="flex flex-col h-full">
       <ProgressBar value={progress} size="lg" className="mb-6" />
 
-      {/* Slide title - large and visible */}
-      <h2 className="text-xl font-bold text-center mb-4 px-4">{currentSlide.title}</h2>
+      {/* Slide title with position label */}
+      <div className="text-center mb-4 px-4">
+        <h2 className="text-xl font-bold">{currentSlide.title}</h2>
+        {isChunkMode && positionLabel && (
+          <p className="text-sm text-text-dim mt-1">{positionLabel}</p>
+        )}
+      </div>
 
       {showTimer && (
         <TimerOverlay
@@ -446,7 +497,7 @@ export function PromptMode({
         {revealed ? (
           <div className="bg-surface rounded-[var(--radius)] p-4 max-h-32 overflow-y-auto">
             <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {currentSlide.notes}
+              {isChunkMode ? currentContent : currentSlide.notes}
             </p>
           </div>
         ) : (
@@ -470,8 +521,8 @@ export function PromptMode({
         onBack={handleBack}
         onRepeat={handleRepeat}
         onNext={handleNext}
-        isFirstSlide={isFirstSlide}
-        isLastSlide={isLastSlide}
+        isFirstSlide={isAtStart}
+        isLastSlide={isAtEnd}
         iconOnly
       />
     </div>

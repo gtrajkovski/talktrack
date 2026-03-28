@@ -12,6 +12,7 @@ import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voic
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
+import { useChunkNavigation } from "@/hooks/useChunkNavigation";
 import type { Slide } from "@/types/talk";
 
 interface ListenModeProps {
@@ -41,6 +42,19 @@ export function ListenMode({
   // Sync earcons with settings
   useEarconSync();
 
+  // Chunk-aware navigation
+  const {
+    currentContent,
+    progress: chunkProgress,
+    positionLabel,
+    isChunkMode,
+    isLastChunk,
+    isFirstChunk,
+    onNextChunk,
+    onPrevChunk,
+    isSlideTransition,
+  } = useChunkNavigation();
+
   // Recognition refs
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
@@ -55,11 +69,16 @@ export function ListenMode({
   const handlePauseRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
   const startListeningRef = useRef<() => void>(() => {});
+  const speakContentRef = useRef<() => void>(() => {});
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
-  const progress = ((currentIndex + 1) / slides.length) * 100;
+  // Use chunk progress when in chunk mode, otherwise slide progress
+  const progress = isChunkMode ? chunkProgress : ((currentIndex + 1) / slides.length) * 100;
+  // For navigation: consider both chunk and slide boundaries
+  const isAtEnd = isChunkMode ? isLastChunk : isLastSlide;
+  const isAtStart = isChunkMode ? isFirstChunk : isFirstSlide;
 
   // Check for voice commands
   const checkCommand = useCallback((text: string): string | null => {
@@ -184,13 +203,16 @@ export function ListenMode({
     }
   }, []);
 
-  // Speak slide and set up auto-advance
-  const speakSlide = useCallback(() => {
+  // Speak current content (chunk or full slide) and set up auto-advance
+  const speakContent = useCallback(() => {
     clearAutoAdvanceTimer();
     setStatus("playing");
     setAudioState("speaking");
 
-    voicebox.play(currentSlide.notes, {
+    // Use chunk content in chunk mode, otherwise full slide notes
+    const textToSpeak = currentContent || currentSlide.notes;
+
+    voicebox.play(textToSpeak, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -204,47 +226,103 @@ export function ListenMode({
         if (autoAdvance) {
           autoAdvanceTimerRef.current = setTimeout(() => {
             if (!isMountedRef.current) return;
-            if (isLastSlide) {
-              onComplete();
+
+            // In chunk mode: advance chunk first, then slide if at chunk boundary
+            if (isChunkMode) {
+              if (isLastChunk) {
+                // All chunks done, complete the session
+                onComplete();
+              } else {
+                // Try to advance chunk (handles earcons internally)
+                const advanced = onNextChunk();
+                if (advanced) {
+                  // Chunk advanced successfully, speak new content after state update
+                  // Use setTimeout to allow React to process the state change
+                  setTimeout(() => speakContentRef.current(), 50);
+                } else if (isSlideTransition("next")) {
+                  // Crossed to new slide, advance slide
+                  onNext();
+                }
+              }
             } else {
-              earcons.slideAdvance();
-              onNext();
+              // Slide mode: original behavior
+              if (isLastSlide) {
+                onComplete();
+              } else {
+                earcons.slideAdvance();
+                onNext();
+              }
             }
           }, autoAdvanceDelay * 1000);
         }
       },
     });
-  }, [currentSlide.notes, speechRate, voiceName, autoAdvance, autoAdvanceDelay, isLastSlide, onComplete, onNext, setAudioState, clearAutoAdvanceTimer, startListening]);
+  }, [currentContent, currentSlide.notes, speechRate, voiceName, autoAdvance, autoAdvanceDelay, isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, isSlideTransition, setAudioState, clearAutoAdvanceTimer, startListening]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     earcons.repeat();
-    speakSlide();
-  }, [speakSlide, stopListening, clearAutoAdvanceTimer]);
+    speakContent();
+  }, [speakContent, stopListening, clearAutoAdvanceTimer]);
 
   const handleNext = useCallback(() => {
     voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     setAudioState("idle");
-    if (isLastSlide) {
-      onComplete();
+
+    if (isChunkMode) {
+      // In chunk mode: try to advance chunk
+      if (isLastChunk) {
+        onComplete();
+      } else {
+        const advanced = onNextChunk();
+        if (!advanced) {
+          // Fallback to slide advance if chunk advance fails
+          if (!isLastSlide) {
+            earcons.slideAdvance();
+            onNext();
+          } else {
+            onComplete();
+          }
+        }
+      }
     } else {
-      earcons.slideAdvance();
-      onNext();
+      // Slide mode: original behavior
+      if (isLastSlide) {
+        onComplete();
+      } else {
+        earcons.slideAdvance();
+        onNext();
+      }
     }
-  }, [isLastSlide, onComplete, onNext, stopListening, clearAutoAdvanceTimer, setAudioState]);
+  }, [isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, stopListening, clearAutoAdvanceTimer, setAudioState]);
 
   const handleBack = useCallback(() => {
     voicebox.stop();
     stopListening();
     clearAutoAdvanceTimer();
     setAudioState("idle");
-    earcons.slideBack();
-    onPrev();
-  }, [onPrev, stopListening, clearAutoAdvanceTimer, setAudioState]);
+
+    if (isChunkMode) {
+      // In chunk mode: try to go back a chunk
+      if (!isFirstChunk) {
+        onPrevChunk();
+      } else {
+        // At first chunk, go to previous slide
+        if (!isFirstSlide) {
+          earcons.slideBack();
+          onPrev();
+        }
+      }
+    } else {
+      // Slide mode: original behavior
+      earcons.slideBack();
+      onPrev();
+    }
+  }, [isChunkMode, isFirstChunk, isFirstSlide, onPrev, onPrevChunk, stopListening, clearAutoAdvanceTimer, setAudioState]);
 
   const handlePause = useCallback(() => {
     voicebox.stop();
@@ -259,8 +337,8 @@ export function ListenMode({
 
   const handleResume = useCallback(() => {
     stopListening();
-    speakSlide();
-  }, [speakSlide, stopListening]);
+    speakContent();
+  }, [speakContent, stopListening]);
 
   // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
   useEffect(() => {
@@ -270,6 +348,7 @@ export function ListenMode({
     handlePauseRef.current = handlePause;
     handleResumeRef.current = handleResume;
     startListeningRef.current = startListening;
+    speakContentRef.current = speakContent;
   });
 
   // Track mounted state
@@ -281,10 +360,10 @@ export function ListenMode({
   }, []);
 
   // Speak slide on mount and slide change
-  // Note: speakSlide() sets status state which is intentional for TTS initialization
+  // Note: speakContent() sets status state which is intentional for TTS initialization
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional TTS init
-    speakSlide();
+    speakContent();
     return () => {
       voicebox.stop();
       stopListening();
@@ -297,8 +376,13 @@ export function ListenMode({
       {/* Progress */}
       <ProgressBar value={progress} size="lg" className="mb-6" />
 
-      {/* Slide title */}
-      <h2 className="text-xl font-bold text-center mb-4 px-4">{currentSlide.title}</h2>
+      {/* Slide title with position label */}
+      <div className="text-center mb-4 px-4">
+        <h2 className="text-xl font-bold">{currentSlide.title}</h2>
+        {isChunkMode && positionLabel && (
+          <p className="text-sm text-text-dim mt-1">{positionLabel}</p>
+        )}
+      </div>
 
       {/* Glanceable state indicator */}
       <div className="flex justify-center mb-2">
@@ -317,11 +401,11 @@ export function ListenMode({
       {/* Playback progress */}
       <PlaybackIndicator showSentences className="px-4 mb-4" />
 
-      {/* Notes Display */}
+      {/* Notes Display - show current chunk in chunk mode */}
       <div className="flex-1 overflow-y-auto mb-4">
         <div className="bg-surface rounded-[var(--radius)] p-4">
           <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {currentSlide.notes}
+            {currentContent}
           </p>
         </div>
       </div>
@@ -331,8 +415,8 @@ export function ListenMode({
         onBack={handleBack}
         onRepeat={handleRepeat}
         onNext={handleNext}
-        isFirstSlide={isFirstSlide}
-        isLastSlide={isLastSlide}
+        isFirstSlide={isAtStart}
+        isLastSlide={isAtEnd}
         iconOnly
       />
     </div>

@@ -20,14 +20,14 @@ If needed later:
 - parseGoToSectionCommand() in voiceCommands.ts
 
 ### Chunk-Level UI Integration
-**Status:** Deferred from Prompt 06
+**Status:** Partially complete
 
-- ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
-- PromptMode: first-3-words cue for sentences, paragraph labels
-- TestMode: pure recall (sentence number only, no cue)
-- Progress bar reflects chunk count
-- Bookmarking at chunk level
-- Pre-cache audio at sentence level
+- ✅ ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
+- ⏳ PromptMode: first-3-words cue for sentences, paragraph labels
+- ⏳ TestMode: pure recall (sentence number only, no cue)
+- ✅ Progress bar reflects chunk count (in ListenMode)
+- Bookmarking at chunk level (optional)
+- Pre-cache audio at sentence level (optional)
 
 ---
 

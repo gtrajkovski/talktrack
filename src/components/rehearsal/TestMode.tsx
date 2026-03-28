@@ -18,6 +18,7 @@ import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voic
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
+import { useChunkNavigation } from "@/hooks/useChunkNavigation";
 import type { Slide } from "@/types/talk";
 
 interface TestModeProps {
@@ -55,6 +56,24 @@ export function TestMode({
 
   // Sync earcons with settings and play on state transitions
   useEarconSync();
+
+  // Chunk-aware navigation
+  const {
+    currentContent,
+    progress: chunkProgress,
+    positionLabel,
+    isChunkMode,
+    isLastChunk,
+    isFirstChunk,
+    onNextChunk,
+    onPrevChunk,
+    granularity,
+    currentChunkIndex,
+    totalChunks,
+    chunksInCurrentSlide,
+    currentChunkInSlide,
+  } = useChunkNavigation();
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const isListeningRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -65,7 +84,9 @@ export function TestMode({
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
   const isFirstSlide = currentIndex === 0;
-  const progress = ((currentIndex + 1) / slides.length) * 100;
+  const progress = isChunkMode ? chunkProgress : ((currentIndex + 1) / slides.length) * 100;
+  const isAtEnd = isChunkMode ? isLastChunk : isLastSlide;
+  const isAtStart = isChunkMode ? isFirstChunk : isFirstSlide;
 
   // Check for voice commands using localized command set
   const checkCommand = useCallback((text: string): string | null => {
@@ -233,7 +254,17 @@ export function TestMode({
     setStatus("playing");
     setAudioState("speaking");
 
-    voicebox.play(`Slide ${currentIndex + 1}: ${currentSlide.title}`, {
+    // Pure recall: only speak position info, no content hints
+    let promptText: string;
+    if (granularity === "sentence") {
+      promptText = `Sentence ${currentChunkInSlide + 1} of ${chunksInCurrentSlide}`;
+    } else if (granularity === "paragraph") {
+      promptText = `Paragraph ${currentChunkInSlide + 1} of ${chunksInCurrentSlide}`;
+    } else {
+      promptText = `Slide ${currentIndex + 1}: ${currentSlide.title}`;
+    }
+
+    voicebox.play(promptText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -241,7 +272,7 @@ export function TestMode({
         startListening();
       },
     });
-  }, [currentIndex, currentSlide.title, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
 
   const handleHelp = useCallback(() => {
     stopListening();
@@ -274,8 +305,9 @@ export function TestMode({
     clearTranscript();
 
     // Calculate and record score if user spoke something
+    const contentToScore = isChunkMode ? currentContent : currentSlide.notes;
     if (transcriptRef.current) {
-      const score = calculateSimilarity(currentSlide.notes, transcriptRef.current);
+      const score = calculateSimilarity(contentToScore, transcriptRef.current);
       await recordSlideScore(talkId, currentSlide.id, score, "test");
     }
 
@@ -284,18 +316,28 @@ export function TestMode({
       await saveRecording(sessionId, talkId, currentSlide.id, currentIndex);
     }
 
-    if (isLastSlide) onComplete();
-    else { earcons.slideAdvance(); onNext(); }
-  }, [isLastSlide, onComplete, onNext, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentIndex, setAudioState, clearTranscript]);
+    if (isChunkMode) {
+      if (isLastChunk) onComplete();
+      else onNextChunk();
+    } else {
+      if (isLastSlide) onComplete();
+      else { earcons.slideAdvance(); onNext(); }
+    }
+  }, [isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, stopListening, canRecord, sessionId, talkId, currentSlide.id, currentSlide.notes, currentContent, currentIndex, setAudioState, clearTranscript]);
 
   const handleBack = useCallback(() => {
     voicebox.stop();
     stopListening();
     setAudioState("idle");
     clearTranscript();
-    earcons.slideBack();
-    onPrev();
-  }, [onPrev, stopListening, setAudioState, clearTranscript]);
+
+    if (isChunkMode && !isFirstChunk) {
+      onPrevChunk();
+    } else {
+      earcons.slideBack();
+      onPrev();
+    }
+  }, [isChunkMode, isFirstChunk, onPrev, onPrevChunk, stopListening, setAudioState, clearTranscript]);
 
   const handleStop = useCallback(() => {
     voicebox.stop();
@@ -343,8 +385,13 @@ export function TestMode({
     <div className="flex flex-col h-full">
       <ProgressBar value={progress} size="lg" className="mb-6" />
 
-      {/* Slide title - large and visible */}
-      <h2 className="text-xl font-bold text-center mb-4 px-4">{currentSlide.title}</h2>
+      {/* Slide title with position label */}
+      <div className="text-center mb-4 px-4">
+        <h2 className="text-xl font-bold">{currentSlide.title}</h2>
+        {isChunkMode && positionLabel && (
+          <p className="text-sm text-text-dim mt-1">{positionLabel}</p>
+        )}
+      </div>
 
       {showTimer && (
         <TimerOverlay
@@ -397,7 +444,7 @@ export function TestMode({
         {transcript && helpUsed && <TranscriptScore transcript={transcript} originalNotes={currentSlide.notes} showScore={true} />}
       </div>
 
-      <RehearsalControls onBack={handleBack} onRepeat={handleRepeat} onNext={handleNext} isFirstSlide={isFirstSlide} isLastSlide={isLastSlide} nextLabel="Got it" iconOnly />
+      <RehearsalControls onBack={handleBack} onRepeat={handleRepeat} onNext={handleNext} isFirstSlide={isAtStart} isLastSlide={isAtEnd} nextLabel="Got it" iconOnly />
     </div>
   );
 }

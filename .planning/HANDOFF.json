@@ -1,28 +1,36 @@
 {
+  "version": "1.0",
+  "timestamp": "2026-03-28T17:15:00Z",
+  "phase": "chunk-integration",
+  "phase_name": "Chunk-Level UI Integration + Test Coverage",
   "status": "complete",
-  "phase": "prompt-05",
-  "task": "all-handlers-implemented",
-  "total_tasks": 7,
-  "last_updated": "2026-03-27T16:00:00.000Z",
-  "next_action": "Start Prompt 06 — Rehearsal Granularity (Sentence/Paragraph/Slide)",
-  "context_notes": "Prompt 05 complete. All bookmark, score, repeat, and practice mode handlers implemented. 35+ voice commands fully wired. Ready for Prompt 06 chunking engine.",
-  "blockers": [],
-  "human_actions_pending": [],
-  "uncommitted_files": [
-    "src/stores/rehearsalStore.ts",
-    "src/hooks/useRehearsalCommands.ts",
-    "tasks/todo.md"
-  ],
   "completed_tasks": [
-    {"id": "volume-system", "status": "complete", "description": "Volume control in synthesis.ts + ElevenLabs"},
-    {"id": "volume-commands", "status": "complete", "description": "louder/quieter/max/mute/unmute commands"},
-    {"id": "volume-badge", "status": "complete", "description": "VolumeBadge component in StateOrb"},
-    {"id": "command-definitions", "status": "complete", "description": "35+ commands defined in all 4 languages"},
-    {"id": "volume-earcons", "status": "complete", "description": "volumeUp/volumeDown/muteToggle earcons"},
-    {"id": "bookmark-handlers", "status": "complete", "description": "bookmark/listBookmarks/practiceBookmarks/clearBookmarks handlers"},
-    {"id": "score-handlers", "status": "complete", "description": "howDidIDo/myAverage/worstSlides handlers"},
-    {"id": "repeat-handlers", "status": "complete", "description": "repeatSlowly/repeatTitle handlers"},
-    {"id": "practice-modes", "status": "complete", "description": "hardOnly/allSlides practice filtering"}
+    {"id": 1, "name": "Set up Vitest infrastructure", "status": "done"},
+    {"id": 2, "name": "Write tests for chunker.ts", "status": "done"},
+    {"id": 3, "name": "Write tests for voiceCommands.ts", "status": "done"},
+    {"id": 4, "name": "Write tests for similarity.ts", "status": "done"},
+    {"id": 5, "name": "Create useChunkNavigation hook", "status": "done"},
+    {"id": 6, "name": "Integrate chunk navigation into ListenMode", "status": "done"},
+    {"id": 7, "name": "Integrate chunk navigation into PromptMode", "status": "done"},
+    {"id": 8, "name": "Integrate chunk navigation into TestMode", "status": "done"}
   ],
-  "pending_tasks": []
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Manual testing of chunk modes", "context": "Verify sentence/paragraph granularity in all three modes", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Used shared useChunkNavigation hook", "rationale": "Centralizes chunk logic across modes"},
+    {"decision": "Sentence mode speaks cue in PromptMode", "rationale": "First 3 words as minimal hint"},
+    {"decision": "TestMode speaks only position", "rationale": "Pure recall - no content hints"}
+  ],
+  "uncommitted_files": [
+    "src/hooks/useChunkNavigation.ts",
+    "tests/chunker.test.ts",
+    "tests/voiceCommands.test.ts",
+    "tests/similarity.test.ts",
+    "vitest.config.ts"
+  ],
+  "next_action": "Commit all changes, then manual testing",
+  "context_notes": "All chunk integration complete. 92 tests passing. TypeScript compiles."
 }
