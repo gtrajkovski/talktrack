@@ -40,7 +40,7 @@ If needed later:
 - ✅ Unit tests for voiceCommands.ts (done — tests/voiceCommands.test.ts)
 - ✅ Unit tests for similarity.ts (done — tests/similarity.test.ts)
 - ✅ Unit tests for chunker.ts (done — tests/chunker.test.ts)
-- Unit tests for commandHints.ts
+- ✅ Unit tests for commandHints.ts (done — tests/commandHints.test.ts)
 
 ### Manual Testing
 - 8 user journeys end-to-end (new user, prompt mode, test mode, PPTX, DOCX, resume, settings, stats)
