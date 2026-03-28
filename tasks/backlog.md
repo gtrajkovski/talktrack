@@ -20,14 +20,16 @@ If needed later:
 - parseGoToSectionCommand() in voiceCommands.ts
 
 ### Chunk-Level UI Integration
-**Status:** Partially complete
+**Status:** ✅ Complete (2026-03-28)
 
 - ✅ ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
-- ⏳ PromptMode: first-3-words cue for sentences, paragraph labels
-- ⏳ TestMode: pure recall (sentence number only, no cue)
-- ✅ Progress bar reflects chunk count (in ListenMode)
-- Bookmarking at chunk level (optional)
-- Pre-cache audio at sentence level (optional)
+- ✅ PromptMode: first-3-words cue for sentences, paragraph labels
+- ✅ TestMode: pure recall (sentence number only, no cue)
+- ✅ Progress bar reflects chunk count in all modes
+- ✅ useChunkNavigation shared hook
+- ✅ 92 tests passing (chunker, voiceCommands, similarity)
+- Bookmarking at chunk level (optional, deferred)
+- Pre-cache audio at sentence level (optional, deferred)
 
 ---
 
@@ -35,8 +37,9 @@ If needed later:
 
 ### Test Coverage
 - Unit tests for earcons.ts
-- Unit tests for voiceCommands.ts / i18n/voiceCommands.ts
-- Unit tests for similarity.ts scoring
+- ✅ Unit tests for voiceCommands.ts (done — tests/voiceCommands.test.ts)
+- ✅ Unit tests for similarity.ts (done — tests/similarity.test.ts)
+- ✅ Unit tests for chunker.ts (done — tests/chunker.test.ts)
 - Unit tests for commandHints.ts
 
 ### Manual Testing
