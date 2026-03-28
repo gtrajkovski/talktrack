@@ -36,7 +36,7 @@ If needed later:
 ## Technical Debt
 
 ### Test Coverage
-- Unit tests for earcons.ts
+- ✅ Unit tests for earcons.ts (done — tests/earcons.test.ts)
 - ✅ Unit tests for voiceCommands.ts (done — tests/voiceCommands.test.ts)
 - ✅ Unit tests for similarity.ts (done — tests/similarity.test.ts)
 - ✅ Unit tests for chunker.ts (done — tests/chunker.test.ts)
