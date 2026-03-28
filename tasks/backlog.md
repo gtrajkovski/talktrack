@@ -8,10 +8,12 @@
 The VoiceBox local API integration (localhost:17493) was originally planned as a third TTS engine option. Deferred as ElevenLabs + browser TTS provides good quality and offline resilience.
 
 ### Section Navigation
-**Status:** Deferred from Prompt 05
+**Status:** ✅ Complete (2026-03-28)
 
-- Commands: nextSection, prevSection, goToSection, listSections
-- parseGoToSectionCommand() in voiceCommands.ts
+- ✅ Commands: nextSection, prevSection, goToSection, listSections
+- ✅ parseGoToSectionCommand() in voiceCommands.ts
+- ✅ All 4 languages supported (EN, MK, SQ, IT)
+- ✅ 18 new tests added
 
 ### Chunk-Level Enhancements
 **Status:** Deferred — core chunk integration complete

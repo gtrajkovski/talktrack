@@ -46,6 +46,11 @@ export interface VoiceCommandSet {
   paragraphMode: string[];
   slideMode: string[];
   whatMode: string[];  // "What mode am I in?"
+  // Section navigation (Prompt 05 deferred)
+  nextSection: string[];
+  prevSection: string[];
+  goToSection: string[];  // Patterns like "go to section", "section named"
+  listSections: string[];
 }
 
 export const LANGUAGE_LABELS: Record<CommandLanguage, string> = {
@@ -111,6 +116,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     paragraphMode: ["paragraph mode", "by paragraph", "paragraph by paragraph"],
     slideMode: ["slide mode", "by slide", "full slides"],
     whatMode: ["what mode", "current mode", "which mode"],
+    // Section navigation
+    nextSection: ["next section", "skip section", "next part"],
+    prevSection: ["previous section", "last section", "go back section"],
+    goToSection: ["go to section", "section named", "jump to section"],
+    listSections: ["list sections", "show sections", "what sections"],
   },
 
   // Macedonian (Македонски)
@@ -160,6 +170,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     paragraphMode: ["по параграфи", "параграф по параграф"],
     slideMode: ["по слајдови", "цели слајдови"],
     whatMode: ["кој режим", "кој мод"],
+    // Section navigation
+    nextSection: ["следна секција", "следен дел", "прескокни секција"],
+    prevSection: ["претходна секција", "претходен дел"],
+    goToSection: ["оди на секција", "секција со име"],
+    listSections: ["листа секции", "покажи секции", "кои секции"],
   },
 
   // Albanian (Shqip) - Kosovo/Albania
@@ -209,6 +224,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     paragraphMode: ["mënyra paragraf", "paragraf për paragraf"],
     slideMode: ["mënyra slajd", "slajde të plota"],
     whatMode: ["cila mënyrë", "cili mod"],
+    // Section navigation
+    nextSection: ["seksioni tjetër", "pjesa tjetër", "kalo seksionin"],
+    prevSection: ["seksioni i mëparshëm", "pjesa e mëparshme"],
+    goToSection: ["shko te seksioni", "seksioni me emër"],
+    listSections: ["lista e seksioneve", "trego seksionet", "cilat seksione"],
   },
 
   // Italian (Italiano)
@@ -258,6 +278,11 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     paragraphMode: ["modalità paragrafo", "paragrafo per paragrafo"],
     slideMode: ["modalità slide", "slide intere"],
     whatMode: ["quale modalità", "che modalità"],
+    // Section navigation
+    nextSection: ["prossima sezione", "sezione successiva", "salta sezione"],
+    prevSection: ["sezione precedente", "sezione prima"],
+    goToSection: ["vai alla sezione", "sezione chiamata"],
+    listSections: ["lista sezioni", "mostra sezioni", "quali sezioni"],
   },
 };
 
@@ -281,6 +306,8 @@ const PLAYBACK_COMMANDS: (keyof VoiceCommandSet)[] = [
   "faster", "slower", "normalSpeed",
   // Navigation
   "firstSlide", "lastSlide", "goToSlide",
+  // Section navigation
+  "nextSection", "prevSection", "goToSection", "listSections",
   // Info queries
   "whereAmI", "howManyLeft", "timeRemaining",
   // Volume controls
@@ -348,6 +375,10 @@ export function matchCommand(
       if (commandName === "goToSlide" && lastWords.includes(normalizedCommand)) {
         return commandName;
       }
+      // For goToSection, match prefix (e.g., "go to section intro" matches "go to section")
+      if (commandName === "goToSection" && lastWords.includes(normalizedCommand)) {
+        return commandName;
+      }
     }
   }
 
@@ -373,6 +404,49 @@ export function parseGoToSlideNumber(phrase: string): number | null {
       const num = parseInt(match[1], 10);
       if (!isNaN(num) && num > 0) {
         return num;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse section name or number from "go to section X" command
+ * Returns the section identifier (name or number) or null if not found
+ */
+export function parseGoToSectionCommand(phrase: string): string | number | null {
+  const normalizedPhrase = phrase.toLowerCase().trim();
+
+  // Match patterns like "go to section 2", "section number 3"
+  const numberPatterns = [
+    /(?:go to|jump to|section number|section)\s*(\d+)/i,
+    /(\d+)(?:st|nd|rd|th)?\s*section/i,
+  ];
+
+  for (const pattern of numberPatterns) {
+    const match = normalizedPhrase.match(pattern);
+    if (match && match[1]) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > 0) {
+        return num;
+      }
+    }
+  }
+
+  // Match patterns like "go to section intro", "section named conclusion"
+  const namePatterns = [
+    /(?:go to section|jump to section|section named|section called)\s+(.+)/i,
+    /section\s+["']?([^"']+)["']?/i,
+  ];
+
+  for (const pattern of namePatterns) {
+    const match = normalizedPhrase.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // Exclude if it's just a number (handled above)
+      if (name && !/^\d+$/.test(name)) {
+        return name;
       }
     }
   }

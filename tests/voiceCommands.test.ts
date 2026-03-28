@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   matchCommand,
   parseGoToSlideNumber,
+  parseGoToSectionCommand,
   getCommands,
   getRecognitionLocale,
   VOICE_COMMANDS,
@@ -120,6 +121,38 @@ describe('matchCommand', () => {
       expect(matchCommand('slide number 3', enCommands, 'listen')).toBe('goToSlide');
     });
   });
+
+  describe('section navigation commands', () => {
+    it('matches next section', () => {
+      expect(matchCommand('next section', enCommands, 'listen')).toBe('nextSection');
+      expect(matchCommand('skip section', enCommands, 'listen')).toBe('nextSection');
+      expect(matchCommand('next part', enCommands, 'listen')).toBe('nextSection');
+    });
+
+    it('matches previous section', () => {
+      expect(matchCommand('previous section', enCommands, 'listen')).toBe('prevSection');
+      expect(matchCommand('last section', enCommands, 'listen')).toBe('prevSection');
+      expect(matchCommand('go back section', enCommands, 'listen')).toBe('prevSection');
+    });
+
+    it('matches go to section with name', () => {
+      expect(matchCommand('go to section intro', enCommands, 'listen')).toBe('goToSection');
+      expect(matchCommand('section named conclusion', enCommands, 'listen')).toBe('goToSection');
+      expect(matchCommand('jump to section overview', enCommands, 'listen')).toBe('goToSection');
+    });
+
+    it('matches list sections', () => {
+      expect(matchCommand('list sections', enCommands, 'listen')).toBe('listSections');
+      expect(matchCommand('show sections', enCommands, 'listen')).toBe('listSections');
+      expect(matchCommand('what sections', enCommands, 'listen')).toBe('listSections');
+    });
+
+    it('section commands work in all modes', () => {
+      expect(matchCommand('next section', enCommands, 'prompt')).toBe('nextSection');
+      expect(matchCommand('next section', enCommands, 'test')).toBe('nextSection');
+      expect(matchCommand('list sections', enCommands, 'prompt')).toBe('listSections');
+    });
+  });
 });
 
 describe('parseGoToSlideNumber', () => {
@@ -156,6 +189,73 @@ describe('parseGoToSlideNumber', () => {
   it('is case insensitive', () => {
     expect(parseGoToSlideNumber('GO TO SLIDE 5')).toBe(5);
     expect(parseGoToSlideNumber('Go To Slide 3')).toBe(3);
+  });
+});
+
+describe('parseGoToSectionCommand', () => {
+  describe('section by number', () => {
+    it('parses "go to section N" format', () => {
+      expect(parseGoToSectionCommand('go to section 2')).toBe(2);
+      expect(parseGoToSectionCommand('go to section 5')).toBe(5);
+    });
+
+    it('parses "section number N" format', () => {
+      expect(parseGoToSectionCommand('section number 3')).toBe(3);
+    });
+
+    it('parses "jump to section N" format', () => {
+      expect(parseGoToSectionCommand('jump to section 1')).toBe(1);
+    });
+
+    it('parses "Nth section" format', () => {
+      expect(parseGoToSectionCommand('2nd section')).toBe(2);
+      expect(parseGoToSectionCommand('1st section')).toBe(1);
+      expect(parseGoToSectionCommand('3rd section')).toBe(3);
+    });
+
+    it('returns null for zero', () => {
+      expect(parseGoToSectionCommand('go to section 0')).toBeNull();
+    });
+  });
+
+  describe('section by name', () => {
+    it('parses "go to section name" format', () => {
+      expect(parseGoToSectionCommand('go to section intro')).toBe('intro');
+      expect(parseGoToSectionCommand('go to section conclusion')).toBe('conclusion');
+    });
+
+    it('parses "section named X" format', () => {
+      expect(parseGoToSectionCommand('section named overview')).toBe('overview');
+    });
+
+    it('parses "section called X" format', () => {
+      expect(parseGoToSectionCommand('section called summary')).toBe('summary');
+    });
+
+    it('parses multi-word section names', () => {
+      expect(parseGoToSectionCommand('go to section main content')).toBe('main content');
+      expect(parseGoToSectionCommand('section named key findings')).toBe('key findings');
+    });
+
+    it('handles quoted section names', () => {
+      expect(parseGoToSectionCommand('section "intro"')).toBe('intro');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('returns null for invalid input', () => {
+      expect(parseGoToSectionCommand('hello world')).toBeNull();
+      expect(parseGoToSectionCommand('')).toBeNull();
+    });
+
+    it('is case insensitive', () => {
+      expect(parseGoToSectionCommand('GO TO SECTION 2')).toBe(2);
+      expect(parseGoToSectionCommand('Go To Section Intro')).toBe('intro');
+    });
+
+    it('prefers number over name when input is numeric', () => {
+      expect(parseGoToSectionCommand('go to section 5')).toBe(5);
+    });
   });
 });
 
