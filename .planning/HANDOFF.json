@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-28T19:40:00Z",
+  "phase": "tech-debt-cleanup",
+  "phase_name": "Technical Debt & Deferred Work",
+  "status": "complete",
+  "completed_tasks": [
+    {"id": 1, "name": "Update backlog after chunk integration", "status": "done"},
+    {"id": 2, "name": "Add earcons.ts unit tests", "status": "done", "tests": 59},
+    {"id": 3, "name": "Add commandHints.ts unit tests", "status": "done", "tests": 22},
+    {"id": 4, "name": "Generate PWA PNG icons", "status": "done"},
+    {"id": 5, "name": "Add section navigation commands", "status": "done", "tests": 18},
+    {"id": 6, "name": "Add chunk-level bookmarking", "status": "done"}
+  ],
+  "remaining_tasks": [
+    {"id": 7, "name": "Audio pre-cache at sentence level", "status": "deferred"},
+    {"id": 8, "name": "VoiceBox Clone API", "status": "deferred", "note": "Not needed for core"},
+    {"id": 9, "name": "Manual testing (8 user journeys)", "status": "pending"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Section nav commands added to all 4 languages", "rationale": "EN, MK, SQ, IT consistency"},
+    {"decision": "Chunk bookmarks use chunk.id as key", "rationale": "Unique across session"},
+    {"decision": "Audio pre-cache deferred", "rationale": "Complex infrastructure, optional"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Manual testing or continue with deferred items",
+  "context_notes": "All unit test tech debt cleared. 191 tests passing. Section navigation and chunk bookmarks added. VoiceBox and audio pre-cache remain as optional deferred items.",
+  "test_count": 191
+}
