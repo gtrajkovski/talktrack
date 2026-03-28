@@ -16,10 +16,10 @@ The VoiceBox local API integration (localhost:17493) was originally planned as a
 - ✅ 18 new tests added
 
 ### Chunk-Level Enhancements
-**Status:** Deferred — core chunk integration complete
+**Status:** Partial
 
-- Bookmarking at chunk level
-- Pre-cache audio at sentence level
+- ✅ Bookmarking at chunk level (toggleChunkBookmark, isChunkBookmarked, etc.)
+- Pre-cache audio at sentence level (deferred)
 
 ---
 

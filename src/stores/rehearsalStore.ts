@@ -38,6 +38,7 @@ interface RehearsalState {
 
   // Bookmark and practice mode
   bookmarkedSlides: Set<string>;  // Slide IDs
+  bookmarkedChunks: Set<string>;  // Chunk IDs (for granular bookmarking)
   practiceMode: PracticeMode;
 
   // Granularity (sentence/paragraph/slide)
@@ -87,13 +88,19 @@ interface RehearsalState {
   setSpeedMultiplier: (speed: number) => void;
   getEffectiveSpeed: (baseRate: number) => number;  // baseRate * speedMultiplier
 
-  // Bookmark actions
+  // Bookmark actions (slide-level)
   toggleBookmark: (slideId: string) => boolean;  // Returns true if now bookmarked
   addBookmark: (slideId: string) => void;
   removeBookmark: (slideId: string) => void;
   clearBookmarks: () => void;
   isBookmarked: (slideId: string) => boolean;
   getBookmarkedSlideIndices: () => number[];
+
+  // Chunk bookmark actions
+  toggleChunkBookmark: (chunkId: string) => boolean;
+  isChunkBookmarked: (chunkId: string) => boolean;
+  getBookmarkedChunkIndices: () => number[];
+  clearChunkBookmarks: () => void;
 
   // Practice mode actions
   setPracticeMode: (mode: PracticeMode) => void;
@@ -131,6 +138,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
 
   // Bookmark and practice mode initial values
   bookmarkedSlides: new Set<string>(),
+  bookmarkedChunks: new Set<string>(),
   practiceMode: 'all' as PracticeMode,
 
   // Granularity initial values
@@ -217,6 +225,7 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       currentAttempt: null,
       speedMultiplier: DEFAULT_SPEED,
       bookmarkedSlides: new Set<string>(),
+      bookmarkedChunks: new Set<string>(),
       practiceMode: 'all' as PracticeMode,
       // Reset chunks but preserve granularity preference
       chunks: [] as Chunk[],
@@ -426,6 +435,36 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     return talk.slides
       .filter(slide => bookmarkedSlides.has(slide.id))
       .map(slide => slide.index);
+  },
+
+  // Chunk bookmark actions
+  toggleChunkBookmark: (chunkId: string) => {
+    const { bookmarkedChunks } = get();
+    const newSet = new Set(bookmarkedChunks);
+    const isNowBookmarked = !newSet.has(chunkId);
+    if (isNowBookmarked) {
+      newSet.add(chunkId);
+    } else {
+      newSet.delete(chunkId);
+    }
+    set({ bookmarkedChunks: newSet });
+    return isNowBookmarked;
+  },
+
+  isChunkBookmarked: (chunkId: string) => {
+    const { bookmarkedChunks } = get();
+    return bookmarkedChunks.has(chunkId);
+  },
+
+  getBookmarkedChunkIndices: () => {
+    const { chunks, bookmarkedChunks } = get();
+    return chunks
+      .filter(chunk => bookmarkedChunks.has(chunk.id))
+      .map(chunk => chunk.globalIndex);
+  },
+
+  clearChunkBookmarks: () => {
+    set({ bookmarkedChunks: new Set<string>() });
   },
 
   // Practice mode actions
