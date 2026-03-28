@@ -47,7 +47,7 @@ If needed later:
 - Data integrity verification (session persistence, cascade delete, export correctness)
 
 ### PWA Enhancement
-- Generate PNG icons from SVG for broader compatibility (currently SVG-only)
+- ✅ Generate PNG icons from SVG (done — `npm run generate-icons`)
 
 ---
 
