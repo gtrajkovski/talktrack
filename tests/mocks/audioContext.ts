@@ -78,17 +78,17 @@ export class MockAudioBuffer {
   readonly length: number;
   readonly duration: number;
   readonly numberOfChannels: number;
+  getChannelData: ReturnType<typeof vi.fn>;
+  copyFromChannel = vi.fn();
+  copyToChannel = vi.fn();
 
   constructor(options: { length: number; sampleRate: number; numberOfChannels?: number }) {
     this.length = options.length;
     this.sampleRate = options.sampleRate;
     this.numberOfChannels = options.numberOfChannels || 1;
     this.duration = this.length / this.sampleRate;
+    this.getChannelData = vi.fn().mockReturnValue(new Float32Array(this.length));
   }
-
-  getChannelData = vi.fn().mockReturnValue(new Float32Array(this.length));
-  copyFromChannel = vi.fn();
-  copyToChannel = vi.fn();
 }
 
 export class MockAudioContext {

@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { AppShell, Header } from "@/components/layout";
-import { PasteImport, FileUpload, VoiceRecord } from "@/components/import";
+import { PasteImport, FileUpload, UrlImport, VoiceRecord } from "@/components/import";
 
-type Tab = "paste" | "upload" | "record";
+type Tab = "paste" | "upload" | "url" | "record";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "paste", label: "Paste" },
   { id: "upload", label: "Upload" },
+  { id: "url", label: "URL" },
   { id: "record", label: "Record" },
 ];
 
@@ -46,6 +47,7 @@ export default function ImportPage() {
         {/* Tab Content */}
         {activeTab === "paste" && <PasteImport />}
         {activeTab === "upload" && <FileUpload />}
+        {activeTab === "url" && <UrlImport />}
         {activeTab === "record" && <VoiceRecord />}
       </div>
     </AppShell>

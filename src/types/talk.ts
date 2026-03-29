@@ -5,7 +5,7 @@ export interface Talk {
   createdAt: number;
   updatedAt: number;
   totalRehearsals: number;
-  source: "paste" | "pptx" | "docx" | "voice" | "demo";
+  source: "paste" | "pptx" | "docx" | "pdf" | "url" | "voice" | "demo";
 }
 
 export interface ScoreEntry {

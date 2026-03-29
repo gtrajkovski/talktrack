@@ -74,7 +74,7 @@ beforeEach(() => {
   });
 
   // MediaRecorder
-  (globalThis as Record<string, unknown>).MediaRecorder = vi.fn().mockImplementation(() => ({
+  const MockMediaRecorder = vi.fn().mockImplementation(() => ({
     start: vi.fn(),
     stop: vi.fn(),
     pause: vi.fn(),
@@ -83,11 +83,12 @@ beforeEach(() => {
     onstop: null,
     onerror: null,
     state: 'inactive',
-  }));
-  (globalThis as Record<string, unknown>).MediaRecorder.isTypeSupported = vi.fn().mockReturnValue(true);
+  })) as unknown as typeof MediaRecorder;
+  (MockMediaRecorder as unknown as { isTypeSupported: ReturnType<typeof vi.fn> }).isTypeSupported = vi.fn().mockReturnValue(true);
+  (globalThis as Record<string, unknown>).MediaRecorder = MockMediaRecorder;
 
   // Blob and URL
-  (globalThis as Record<string, unknown>).Blob = class MockBlob {
+  class MockBlob {
     parts: BlobPart[];
     options: BlobPropertyBag | undefined;
     size: number;
@@ -100,9 +101,10 @@ beforeEach(() => {
     }
     arrayBuffer() { return Promise.resolve(new ArrayBuffer(0)); }
     text() { return Promise.resolve(''); }
-    slice() { return new (globalThis as Record<string, unknown>).Blob() as Blob; }
+    slice() { return new MockBlob() as unknown as Blob; }
     stream() { return new ReadableStream(); }
-  };
+  }
+  (globalThis as Record<string, unknown>).Blob = MockBlob;
 
   (globalThis as Record<string, unknown>).URL = {
     createObjectURL: vi.fn().mockReturnValue('blob:mock-url'),

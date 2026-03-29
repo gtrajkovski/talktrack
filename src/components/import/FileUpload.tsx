@@ -10,12 +10,13 @@ import { parsePptx } from "@/lib/parsers/pptx";
 import { parseDocx } from "@/lib/parsers/docx";
 import type { Talk } from "@/types/talk";
 
-type FileType = "pptx" | "docx" | "unknown";
+type FileType = "pptx" | "docx" | "pdf" | "unknown";
 
 function detectFileType(file: File): FileType {
   const name = file.name.toLowerCase();
   if (name.endsWith(".pptx")) return "pptx";
   if (name.endsWith(".docx")) return "docx";
+  if (name.endsWith(".pdf") || file.type === "application/pdf") return "pdf";
   return "unknown";
 }
 
@@ -40,16 +41,21 @@ export function FileUpload() {
       const fileType = detectFileType(file);
 
       if (fileType === "unknown") {
-        throw new Error("Unsupported file type. Please use .pptx or .docx files.");
+        throw new Error("Unsupported file type. Please use .pptx, .docx, or .pdf files.");
       }
 
-      const buffer = await file.arrayBuffer();
       let result;
 
-      if (fileType === "pptx") {
-        result = await parsePptx(buffer);
+      if (fileType === "pdf") {
+        const { parsePdf } = await import("@/lib/parsers/pdf");
+        result = await parsePdf(file);
       } else {
-        result = await parseDocx(buffer);
+        const buffer = await file.arrayBuffer();
+        if (fileType === "pptx") {
+          result = await parsePptx(buffer);
+        } else {
+          result = await parseDocx(buffer);
+        }
       }
 
       if (result.slides.length === 0) {
@@ -85,7 +91,7 @@ export function FileUpload() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pptx,.docx"
+        accept=".pptx,.docx,.pdf"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -93,7 +99,7 @@ export function FileUpload() {
       <Card className="text-center py-8">
         <div className="text-4xl mb-4">Upload</div>
         <p className="text-text-dim mb-6">
-          Import speaker notes from PowerPoint (.pptx) or Word (.docx) files.
+          Import speaker notes from PowerPoint (.pptx), Word (.docx), or PDF files.
         </p>
 
         <Button onClick={handleClick} disabled={isProcessing}>
@@ -118,6 +124,7 @@ export function FileUpload() {
         <ul className="text-sm text-text-dim space-y-1">
           <li><strong>.pptx</strong> - Extracts slide titles and speaker notes</li>
           <li><strong>.docx</strong> - Splits by paragraphs (blank lines = slide breaks)</li>
+          <li><strong>.pdf</strong> - Extracts text page-by-page (text-based PDFs only)</li>
         </ul>
       </Card>
     </div>

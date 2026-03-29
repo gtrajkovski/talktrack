@@ -1,9 +1,9 @@
 # TalkTrack — Active Work
 
 ## Current Status
-- **Prompts 01-07:** ✅ ALL COMPLETE
-- **Tests:** 191 passing
-- **Build:** Clean (zero warnings)
+- **Prompts 01-09:** ✅ ALL COMPLETE
+- **Tests:** 323 passing
+- **Build:** Clean
 
 ## Prompt Reference
 
@@ -184,6 +184,27 @@
 - [ ] Test coverage — earcons, voiceCommands, similarity tests (future enhancement)
 - [ ] Data integrity — manual verification recommended
 
+### Prompt 09 — PDF Import + URL Import + Test Suite — ✅ COMPLETE
+**Part 1: PDF Import** ✅
+- [x] pdfjs-dist dependency installed
+- [x] `src/lib/parsers/pdf.ts` — page-by-page extraction, short page merging
+- [x] FileUpload updated to accept .pdf files
+- [x] PDF tests (`tests/parsers/pdf.test.ts`)
+
+**Part 2: URL Reader Import** ✅
+- [x] @mozilla/readability + linkedom dependencies
+- [x] API route `src/app/api/extract/route.ts` — server-side fetch + Readability
+- [x] `src/lib/parsers/url.ts` — paragraph splitting, 60 slide cap
+- [x] `src/components/import/UrlImport.tsx` — URL input + preview UI
+- [x] Import page updated with URL tab
+- [x] URL parser tests (`tests/parsers/url.test.ts`)
+
+**Part 3: Expanded Test Suite** ✅
+- [x] Text parser tests (`tests/parsers/text.test.ts`)
+- [x] Markdown parser tests (`tests/parsers/markdown.test.ts`)
+- [x] PPTX parser tests (`tests/parsers/pptx.test.ts`)
+- [x] Total: 323 tests passing
+
 ---
 
 ## Queue
@@ -211,7 +232,10 @@
 
 **Testing & Verification:**
 - [ ] 8 user journeys — manual testing
-- [ ] Additional test coverage (earcons, voiceCommands)
+- [x] Mock infrastructure (SpeechSynthesis, SpeechRecognition, AudioContext)
+- [x] Unit tests for fillerWords, pacing, formatDuration, wordCount
+- [ ] Store tests (rehearsalStore, settingsStore)
+- [ ] Integration tests
 - [ ] Data integrity verification
 
 ---

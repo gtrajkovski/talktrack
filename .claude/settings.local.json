@@ -31,7 +31,9 @@
       "mcp__filesystem__search_files",
       "Bash(taskkill:*)",
       "Bash(cmd //c \"taskkill /PID 15616 /F\")",
-      "Bash(start:*)"
+      "Bash(start:*)",
+      "Bash(wc:*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }
