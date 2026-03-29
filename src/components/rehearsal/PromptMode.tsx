@@ -19,6 +19,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
 import { useChunkNavigation } from "@/hooks/useChunkNavigation";
+import { usePrecache } from "@/hooks/usePrecache";
 import type { Slide } from "@/types/talk";
 
 interface PromptModeProps {
@@ -49,7 +50,19 @@ export function PromptMode({
   onComplete,
   onUsedHelp,
 }: PromptModeProps) {
-  const { speechRate, voiceName, showTimer, timerWarningSeconds, commandLanguage } = useSettingsStore();
+  const {
+    speechRate,
+    voiceName,
+    showTimer,
+    timerWarningSeconds,
+    commandLanguage,
+    useElevenLabs,
+    elevenLabsApiKey,
+    elevenLabsVoiceId,
+    useVoiceBoxClone,
+    voiceBoxCloneUrl,
+    voiceBoxCloneVoiceId,
+  } = useSettingsStore();
   const { setAudioState, setLastCommand, setTranscript: setStoreTranscript, clearTranscript } = useRehearsalStore();
   const canRecord = isRecordingSupported();
   const commands = getCommands(commandLanguage);
@@ -60,6 +73,9 @@ export function PromptMode({
 
   // Sync earcons with settings and play on state transitions
   useEarconSync();
+
+  // Pre-cache upcoming chunks for smoother playback
+  usePrecache();
 
   // Chunk-aware navigation
   const {
@@ -316,12 +332,20 @@ export function PromptMode({
     voicebox.play(promptText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
+      voiceBoxClone: useVoiceBoxClone ? {
+        serverUrl: voiceBoxCloneUrl,
+        voiceId: voiceBoxCloneVoiceId,
+      } : undefined,
+      elevenLabs: !useVoiceBoxClone && useElevenLabs ? {
+        apiKey: elevenLabsApiKey,
+        voiceId: elevenLabsVoiceId,
+      } : undefined,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.title, currentCue, currentLabel, granularity, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentSlide.title, currentCue, currentLabel, granularity, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript]);
 
   const handleReveal = useCallback(() => {
     stopListening();
@@ -338,12 +362,20 @@ export function PromptMode({
     voicebox.play(revealText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
+      voiceBoxClone: useVoiceBoxClone ? {
+        serverUrl: voiceBoxCloneUrl,
+        voiceId: voiceBoxCloneVoiceId,
+      } : undefined,
+      elevenLabs: !useVoiceBoxClone && useElevenLabs ? {
+        apiKey: elevenLabsApiKey,
+        voiceId: elevenLabsVoiceId,
+      } : undefined,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.notes, currentContent, isChunkMode, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
+  }, [currentSlide.notes, currentContent, isChunkMode, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();

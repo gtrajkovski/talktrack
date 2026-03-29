@@ -1,4 +1,5 @@
 import * as elevenLabs from "./elevenlabs";
+import * as voiceboxClone from "./voiceboxClone";
 
 type SpeechCallback = () => void;
 
@@ -8,6 +9,7 @@ let _currentUtterance: SpeechSynthesisUtterance | null = null;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let _onEndCallback: SpeechCallback | null = null;
 let usingElevenLabs = false;
+let usingVoiceBoxClone = false;
 
 // Volume control (0-1, default 1.0)
 let currentVolume = 1.0;
@@ -95,6 +97,11 @@ export interface SpeakOptions {
   volume?: number;  // 0-1, overrides current volume if provided
   voiceName?: string;
   onEnd?: SpeechCallback;
+  // VoiceBox Clone options (local TTS server, highest priority)
+  voiceBoxClone?: {
+    serverUrl: string;
+    voiceId: string;
+  };
   // ElevenLabs options (if provided, will attempt to use ElevenLabs)
   elevenLabs?: {
     apiKey: string;
@@ -103,12 +110,13 @@ export interface SpeakOptions {
 }
 
 /**
- * Speak text using either ElevenLabs (if configured and online) or Web Speech API
+ * Speak text using VoiceBox Clone, ElevenLabs, or Web Speech API
+ * Priority: VoiceBox Clone > ElevenLabs > Web Speech
  */
 export function speak(text: string, options: SpeakOptions = {}): void {
   if (typeof window === "undefined") return;
 
-  const { rate = 0.95, volume, voiceName, onEnd, elevenLabs: elevenLabsConfig } = options;
+  const { rate = 0.95, volume, voiceName, onEnd, voiceBoxClone: vbcConfig, elevenLabs: elevenLabsConfig } = options;
 
   // Use provided volume or current volume (affected by mute)
   const effectiveVolume = isMuted ? 0 : (volume ?? currentVolume);
@@ -116,7 +124,36 @@ export function speak(text: string, options: SpeakOptions = {}): void {
   // Cancel any current speech
   stop();
 
-  // Try ElevenLabs if configured and online
+  // Priority 1: Try VoiceBox Clone if configured
+  if (
+    vbcConfig &&
+    vbcConfig.serverUrl &&
+    vbcConfig.voiceId
+  ) {
+    usingVoiceBoxClone = true;
+    _onEndCallback = onEnd || null;
+
+    voiceboxClone
+      .speak(text, vbcConfig.voiceId, vbcConfig.serverUrl, {
+        speed: rate,
+        volume: effectiveVolume,
+        onEnd: () => {
+          usingVoiceBoxClone = false;
+          _onEndCallback = null;
+          onEnd?.();
+        },
+      })
+      .catch((e) => {
+        console.warn("VoiceBox Clone failed, trying fallback:", e);
+        usingVoiceBoxClone = false;
+        // Fall back to ElevenLabs or Web Speech
+        speakFallback(text, { rate, volume: effectiveVolume, voiceName, onEnd, elevenLabs: elevenLabsConfig });
+      });
+
+    return;
+  }
+
+  // Priority 2: Try ElevenLabs if configured and online
   if (
     elevenLabsConfig &&
     elevenLabsConfig.apiKey &&
@@ -150,8 +187,51 @@ export function speak(text: string, options: SpeakOptions = {}): void {
     return;
   }
 
-  // Use Web Speech API
+  // Priority 3: Use Web Speech API
   webSpeechSpeak(text, { rate, volume: effectiveVolume, voiceName, onEnd });
+}
+
+/**
+ * Internal: Fallback when VoiceBox Clone fails
+ * Tries ElevenLabs, then Web Speech
+ */
+function speakFallback(
+  text: string,
+  options: { rate: number; volume: number; voiceName?: string; onEnd?: SpeechCallback; elevenLabs?: { apiKey: string; voiceId: string } }
+): void {
+  const { rate, volume, voiceName, onEnd, elevenLabs: elevenLabsConfig } = options;
+
+  // Try ElevenLabs if configured and online
+  if (
+    elevenLabsConfig &&
+    elevenLabsConfig.apiKey &&
+    elevenLabsConfig.voiceId &&
+    isOnline()
+  ) {
+    usingElevenLabs = true;
+    _onEndCallback = onEnd || null;
+
+    elevenLabs
+      .speak(text, elevenLabsConfig.voiceId, elevenLabsConfig.apiKey, {
+        speed: rate,
+        volume,
+        onEnd: () => {
+          usingElevenLabs = false;
+          _onEndCallback = null;
+          onEnd?.();
+        },
+      })
+      .catch((e) => {
+        console.warn("ElevenLabs fallback also failed:", e);
+        usingElevenLabs = false;
+        webSpeechSpeak(text, { rate, volume, voiceName, onEnd });
+      });
+
+    return;
+  }
+
+  // Fall back to Web Speech
+  webSpeechSpeak(text, { rate, volume, voiceName, onEnd });
 }
 
 /**
@@ -215,7 +295,12 @@ function webSpeechSpeak(
 export function stop(): void {
   if (typeof window === "undefined") return;
 
-  // Stop both engines
+  // Stop all engines
+  if (usingVoiceBoxClone) {
+    voiceboxClone.stop();
+    usingVoiceBoxClone = false;
+  }
+
   if (usingElevenLabs) {
     elevenLabs.stop();
     usingElevenLabs = false;
@@ -229,7 +314,9 @@ export function stop(): void {
 export function pause(): void {
   if (typeof window === "undefined") return;
 
-  if (usingElevenLabs) {
+  if (usingVoiceBoxClone) {
+    voiceboxClone.pause();
+  } else if (usingElevenLabs) {
     elevenLabs.pause();
   } else {
     speechSynthesis.pause();
@@ -239,7 +326,9 @@ export function pause(): void {
 export function resume(): void {
   if (typeof window === "undefined") return;
 
-  if (usingElevenLabs) {
+  if (usingVoiceBoxClone) {
+    voiceboxClone.resume();
+  } else if (usingElevenLabs) {
     elevenLabs.resume();
   } else {
     speechSynthesis.resume();
@@ -248,6 +337,10 @@ export function resume(): void {
 
 export function isSpeaking(): boolean {
   if (typeof window === "undefined") return false;
+
+  if (usingVoiceBoxClone) {
+    return voiceboxClone.isSpeaking();
+  }
 
   if (usingElevenLabs) {
     return elevenLabs.isSpeaking();
@@ -258,6 +351,10 @@ export function isSpeaking(): boolean {
 
 export function isPaused(): boolean {
   if (typeof window === "undefined") return false;
+
+  if (usingVoiceBoxClone) {
+    return voiceboxClone.isPaused();
+  }
 
   if (usingElevenLabs) {
     return elevenLabs.isPaused();
@@ -271,6 +368,13 @@ export function isPaused(): boolean {
  */
 export function isUsingElevenLabs(): boolean {
   return usingElevenLabs;
+}
+
+/**
+ * Check if currently using VoiceBox Clone
+ */
+export function isUsingVoiceBoxClone(): boolean {
+  return usingVoiceBoxClone;
 }
 
 // ============================================================================
@@ -289,8 +393,10 @@ export function getVolume(): number {
  */
 export function setVolume(vol: number): number {
   currentVolume = Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, vol));
-  // Update ElevenLabs volume too
-  elevenLabs.setVolume(isMuted ? 0 : currentVolume);
+  // Update all TTS engine volumes
+  const effectiveVol = isMuted ? 0 : currentVolume;
+  elevenLabs.setVolume(effectiveVol);
+  voiceboxClone.setVolume(effectiveVol);
   return currentVolume;
 }
 
@@ -329,6 +435,7 @@ export function mute(): void {
     volumeBeforeMute = currentVolume;
     isMuted = true;
     elevenLabs.setVolume(0);
+    voiceboxClone.setVolume(0);
   }
 }
 
@@ -339,6 +446,7 @@ export function unmute(): void {
   if (isMuted) {
     isMuted = false;
     elevenLabs.setVolume(volumeBeforeMute);
+    voiceboxClone.setVolume(volumeBeforeMute);
   }
 }
 

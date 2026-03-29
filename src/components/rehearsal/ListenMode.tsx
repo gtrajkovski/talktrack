@@ -13,6 +13,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
 import { useChunkNavigation } from "@/hooks/useChunkNavigation";
+import { usePrecache } from "@/hooks/usePrecache";
 import type { Slide } from "@/types/talk";
 
 interface ListenModeProps {
@@ -33,7 +34,19 @@ export function ListenMode({
   onPrev,
   onComplete,
 }: ListenModeProps) {
-  const { speechRate, voiceName, autoAdvance, autoAdvanceDelay, commandLanguage } = useSettingsStore();
+  const {
+    speechRate,
+    voiceName,
+    autoAdvance,
+    autoAdvanceDelay,
+    commandLanguage,
+    useElevenLabs,
+    elevenLabsApiKey,
+    elevenLabsVoiceId,
+    useVoiceBoxClone,
+    voiceBoxCloneUrl,
+    voiceBoxCloneVoiceId,
+  } = useSettingsStore();
   const { setAudioState, setLastCommand } = useRehearsalStore();
   const commands = getCommands(commandLanguage);
   const recognitionLocale = getRecognitionLocale(commandLanguage);
@@ -41,6 +54,9 @@ export function ListenMode({
 
   // Sync earcons with settings
   useEarconSync();
+
+  // Pre-cache upcoming chunks for smoother playback
+  usePrecache();
 
   // Chunk-aware navigation
   const {
@@ -215,6 +231,15 @@ export function ListenMode({
     voicebox.play(textToSpeak, {
       rate: speechRate,
       voiceName: voiceName || undefined,
+      // TTS priority: VoiceBox Clone > ElevenLabs > Web Speech
+      voiceBoxClone: useVoiceBoxClone ? {
+        serverUrl: voiceBoxCloneUrl,
+        voiceId: voiceBoxCloneVoiceId,
+      } : undefined,
+      elevenLabs: !useVoiceBoxClone && useElevenLabs ? {
+        apiKey: elevenLabsApiKey,
+        voiceId: elevenLabsVoiceId,
+      } : undefined,
       onEnd: () => {
         if (!isMountedRef.current) return;
         setStatus("idle");

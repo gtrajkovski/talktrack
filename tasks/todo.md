@@ -51,7 +51,9 @@
 **Part 1: VoiceBox Integration** (adapted from spec)
 - ✅ `voicebox.ts` created — playback progress wrapper for unified TTS
 - ✅ PlaybackIndicator with progress tracking
-- ⏭️ VoiceBox local API deferred (optional feature)
+- ✅ VoiceBox Clone local TTS server client (`voiceboxClone.ts`)
+- ✅ VoiceBox Clone settings UI (`VoiceBoxCloneSettings.tsx`)
+- ✅ TTS routing: VoiceBox Clone > ElevenLabs > Web Speech API
 
 **Part 2: Voice Playback Controls**
 - ✅ Speed commands: "faster", "slower", "normal speed"
@@ -149,9 +151,9 @@
 - [x] defaultGranularity setting in UserSettings
 - [ ] Selector in Settings page (optional polish)
 
-**9. Integration** — deferred (optional enhancement)
-- [ ] Bookmarking at chunk level
-- [ ] Pre-cache audio at sentence level
+**9. Integration** ✅
+- [x] Bookmarking at chunk level
+- [x] Pre-cache audio at sentence level (`precache.ts`, `usePrecache.ts`)
 
 ### Prompt 07 — Final Triple-Pass Audit — ✅ COMPLETE
 **Pass 1: Infrastructure, Build & Runtime** ✅ COMPLETE

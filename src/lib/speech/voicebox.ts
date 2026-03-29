@@ -42,6 +42,7 @@ let isPaused = false;
 let isPlaying = false;
 let progressInterval: ReturnType<typeof setInterval> | null = null;
 let usingElevenLabs = false;
+let usingVoiceBoxClone = false;
 
 // Callbacks
 const progressCallbacks: Set<ProgressCallback> = new Set();
@@ -199,6 +200,7 @@ function resetState(): void {
   isPaused = false;
   isPlaying = false;
   usingElevenLabs = false;
+  usingVoiceBoxClone = false;
   stopProgressTracking();
 }
 
@@ -211,6 +213,10 @@ export function play(
     rate?: number;
     voiceName?: string;
     wordsPerMinute?: number;
+    voiceBoxClone?: {
+      serverUrl: string;
+      voiceId: string;
+    };
     elevenLabs?: {
       apiKey: string;
       voiceId: string;
@@ -222,7 +228,7 @@ export function play(
   // Stop any current playback
   stop();
 
-  const { rate = 0.95, voiceName, wordsPerMinute = DEFAULT_WPM, elevenLabs: elevenLabsConfig, onEnd, onSentenceChange } = options;
+  const { rate = 0.95, voiceName, wordsPerMinute = DEFAULT_WPM, voiceBoxClone: vbcConfig, elevenLabs: elevenLabsConfig, onEnd, onSentenceChange } = options;
 
   // Initialize state
   currentText = text;
@@ -232,7 +238,8 @@ export function play(
   startTime = Date.now();
   isPaused = false;
   isPlaying = true;
-  usingElevenLabs = !!elevenLabsConfig;
+  usingVoiceBoxClone = !!vbcConfig;
+  usingElevenLabs = !vbcConfig && !!elevenLabsConfig;
 
   // Start progress tracking
   startProgressTracking();
@@ -245,9 +252,11 @@ export function play(
   }
 
   // Use synthesis module to speak
+  // Priority: VoiceBox Clone > ElevenLabs > Web Speech
   synthesis.speak(text, {
     rate,
     voiceName,
+    voiceBoxClone: vbcConfig,
     elevenLabs: elevenLabsConfig,
     onEnd: () => {
       resetState();
@@ -259,7 +268,7 @@ export function play(
 
   // For Web Speech, track sentence changes by timing
   // This is an approximation based on word count per sentence
-  if (!elevenLabsConfig) {
+  if (!vbcConfig && !elevenLabsConfig) {
     trackSentenceChanges(onSentenceChange);
   }
 }

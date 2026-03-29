@@ -1,31 +1,37 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-28T19:40:00Z",
-  "phase": "tech-debt-cleanup",
-  "phase_name": "Technical Debt & Deferred Work",
+  "timestamp": "2026-03-28T20:20:00Z",
+  "phase": "deferred-features-complete",
+  "phase_name": "VoiceBox Clone + Audio Pre-Cache",
   "status": "complete",
   "completed_tasks": [
-    {"id": 1, "name": "Update backlog after chunk integration", "status": "done"},
-    {"id": 2, "name": "Add earcons.ts unit tests", "status": "done", "tests": 59},
-    {"id": 3, "name": "Add commandHints.ts unit tests", "status": "done", "tests": 22},
-    {"id": 4, "name": "Generate PWA PNG icons", "status": "done"},
-    {"id": 5, "name": "Add section navigation commands", "status": "done", "tests": 18},
-    {"id": 6, "name": "Add chunk-level bookmarking", "status": "done"}
+    {"id": 1, "name": "VoiceBox Clone client (voiceboxClone.ts)", "status": "done"},
+    {"id": 2, "name": "VoiceBox Clone settings (types/settings.ts)", "status": "done"},
+    {"id": 3, "name": "Synthesis routing (VBC > ElevenLabs > Web Speech)", "status": "done"},
+    {"id": 4, "name": "VoiceBox Clone settings UI", "status": "done"},
+    {"id": 5, "name": "Wire VoiceBox Clone into rehearsal components", "status": "done"},
+    {"id": 6, "name": "AbortSignal support in elevenlabs.ts", "status": "done"},
+    {"id": 7, "name": "Precache module (precache.ts)", "status": "done"},
+    {"id": 8, "name": "usePrecache hook", "status": "done"},
+    {"id": 9, "name": "Wire usePrecache into rehearsal components", "status": "done"}
   ],
   "remaining_tasks": [
-    {"id": 7, "name": "Audio pre-cache at sentence level", "status": "deferred"},
-    {"id": 8, "name": "VoiceBox Clone API", "status": "deferred", "note": "Not needed for core"},
-    {"id": 9, "name": "Manual testing (8 user journeys)", "status": "pending"}
+    {"id": 10, "name": "Manual testing (8 user journeys)", "status": "pending"}
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Section nav commands added to all 4 languages", "rationale": "EN, MK, SQ, IT consistency"},
-    {"decision": "Chunk bookmarks use chunk.id as key", "rationale": "Unique across session"},
-    {"decision": "Audio pre-cache deferred", "rationale": "Complex infrastructure, optional"}
+    {"decision": "TTS priority: VoiceBox Clone > ElevenLabs > Web Speech", "rationale": "Local server preferred when available"},
+    {"decision": "Pre-cache lookahead: 2 chunks", "rationale": "Balance between latency reduction and API usage"},
+    {"decision": "Generic local TTS API endpoints", "rationale": "Compatible with VoiceBox Clone, Coqui, XTTS"}
   ],
-  "uncommitted_files": [],
-  "next_action": "Manual testing or continue with deferred items",
-  "context_notes": "All unit test tech debt cleared. 191 tests passing. Section navigation and chunk bookmarks added. VoiceBox and audio pre-cache remain as optional deferred items.",
+  "uncommitted_files": [
+    "src/lib/speech/voiceboxClone.ts",
+    "src/lib/speech/precache.ts",
+    "src/hooks/usePrecache.ts",
+    "src/components/settings/VoiceBoxCloneSettings.tsx"
+  ],
+  "next_action": "Commit changes and manual testing",
+  "context_notes": "Both deferred features implemented: VoiceBox Clone API integration and audio pre-cache at sentence level. All tests pass (191). Build clean.",
   "test_count": 191
 }

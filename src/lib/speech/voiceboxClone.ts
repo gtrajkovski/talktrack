@@ -1,27 +1,29 @@
-// ElevenLabs Text-to-Speech API Client
-// BYOK (Bring Your Own Key) integration with caching
+// VoiceBox Clone - Local TTS Server Client
+// Generic interface for local TTS servers (VoiceBox, Coqui, etc.)
 
-const API_BASE = "https://api.elevenlabs.io/v1";
-
-export interface ElevenLabsVoice {
-  voice_id: string;
+export interface VoiceBoxCloneVoice {
+  id: string;
   name: string;
-  category: string;
-  labels: Record<string, string>;
-  preview_url: string;
+  language?: string;
+  description?: string;
 }
 
-interface ElevenLabsVoicesResponse {
-  voices: ElevenLabsVoice[];
+interface VoicesResponse {
+  voices: VoiceBoxCloneVoice[];
+}
+
+interface HealthResponse {
+  status: "ok" | "error";
+  version?: string;
 }
 
 // In-memory audio cache for the current session
 // Key: hash of text + voiceId, Value: audio blob URL
 const audioCache = new Map<string, string>();
 
-// Simple hash for cache keys
+// Simple hash for cache keys (same as elevenlabs.ts)
 function hashKey(text: string, voiceId: string): string {
-  const str = `${voiceId}:${text}`;
+  const str = `vbc:${voiceId}:${text}`;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -32,63 +34,58 @@ function hashKey(text: string, voiceId: string): string {
 }
 
 /**
- * Test if an API key is valid by making a lightweight request
+ * Check if the VoiceBox Clone server is healthy
  */
-export async function testApiKey(apiKey: string): Promise<boolean> {
-  if (!apiKey || apiKey.trim().length === 0) {
+export async function checkHealth(serverUrl: string): Promise<boolean> {
+  if (!serverUrl || serverUrl.trim().length === 0) {
     return false;
   }
 
   try {
-    const response = await fetch(`${API_BASE}/user`, {
-      headers: {
-        "xi-api-key": apiKey,
-      },
+    const response = await fetch(`${serverUrl}/api/health`, {
+      method: "GET",
+      signal: AbortSignal.timeout(3000), // 3 second timeout
     });
-    return response.ok;
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data: HealthResponse = await response.json();
+    return data.status === "ok";
   } catch {
     return false;
   }
 }
 
 /**
- * Fetch available voices for the user's account
+ * Fetch available voices from the VoiceBox Clone server
  */
 export async function fetchVoices(
-  apiKey: string
-): Promise<ElevenLabsVoice[]> {
-  const response = await fetch(`${API_BASE}/voices`, {
-    headers: {
-      "xi-api-key": apiKey,
-    },
+  serverUrl: string
+): Promise<VoiceBoxCloneVoice[]> {
+  const response = await fetch(`${serverUrl}/api/voices`, {
+    method: "GET",
   });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch voices: ${response.status}`);
   }
 
-  const data: ElevenLabsVoicesResponse = await response.json();
-
-  // Sort by category (premade first, then cloned)
-  return data.voices.sort((a, b) => {
-    if (a.category === "premade" && b.category !== "premade") return -1;
-    if (a.category !== "premade" && b.category === "premade") return 1;
-    return a.name.localeCompare(b.name);
-  });
+  const data: VoicesResponse = await response.json();
+  return data.voices.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
- * Generate speech audio from text using ElevenLabs
+ * Generate speech audio from text using VoiceBox Clone
  * Returns a blob URL that can be played with Audio element
  */
 export async function generateSpeech(
   text: string,
   voiceId: string,
-  apiKey: string,
+  serverUrl: string,
   options: {
-    stability?: number; // 0-1, default 0.5
-    similarityBoost?: number; // 0-1, default 0.75
-    speed?: number; // 0.25-4.0, default 1.0
+    speed?: number; // 0.5-2.0, default 1.0
     signal?: AbortSignal; // For cancellation (pre-cache support)
   } = {}
 ): Promise<string> {
@@ -99,31 +96,23 @@ export async function generateSpeech(
     return cached;
   }
 
-  const { stability = 0.5, similarityBoost = 0.75, speed = 1.0, signal } = options;
+  const { speed = 1.0, signal } = options;
 
-  const response = await fetch(
-    `${API_BASE}/text-to-speech/${voiceId}/stream`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          stability,
-          similarity_boost: similarityBoost,
-          speed,
-        },
-      }),
-      signal,
-    }
-  );
+  const response = await fetch(`${serverUrl}/api/synthesize`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      text,
+      voice_id: voiceId,
+      speed,
+    }),
+    signal,
+  });
 
   if (!response.ok) {
-    throw new Error(`ElevenLabs API error: ${response.status}`);
+    throw new Error(`VoiceBox Clone API error: ${response.status}`);
   }
 
   const blob = await response.blob();
@@ -135,40 +124,19 @@ export async function generateSpeech(
   return blobUrl;
 }
 
-/**
- * Get cached audio URL by cache key (for pre-cache integration)
- */
-export function getCachedByKey(cacheKey: string): string | null {
-  return audioCache.get(cacheKey) || null;
-}
-
-/**
- * Set cached audio URL by cache key (for pre-cache integration)
- */
-export function setCachedByKey(cacheKey: string, blobUrl: string): void {
-  audioCache.set(cacheKey, blobUrl);
-}
-
-/**
- * Generate a cache key for a given text and voiceId
- */
-export function generateCacheKey(text: string, voiceId: string): string {
-  return hashKey(text, voiceId);
-}
-
 // Active audio element for playback control
 let currentAudio: HTMLAudioElement | null = null;
 let onEndCallback: (() => void) | null = null;
 let currentVolumeLevel = 1.0;
 
 /**
- * Speak text using ElevenLabs TTS
+ * Speak text using VoiceBox Clone TTS
  * Handles playback and provides stop/pause controls
  */
 export async function speak(
   text: string,
   voiceId: string,
-  apiKey: string,
+  serverUrl: string,
   options: {
     speed?: number;
     volume?: number;
@@ -187,7 +155,7 @@ export async function speak(
   }
 
   try {
-    const blobUrl = await generateSpeech(text, voiceId, apiKey, { speed });
+    const blobUrl = await generateSpeech(text, voiceId, serverUrl, { speed });
 
     currentAudio = new Audio(blobUrl);
     currentAudio.volume = currentVolumeLevel;
@@ -197,7 +165,7 @@ export async function speak(
       onEndCallback = null;
     };
     currentAudio.onerror = () => {
-      console.warn("ElevenLabs audio playback error");
+      console.warn("VoiceBox Clone audio playback error");
       currentAudio = null;
       onEndCallback?.();
       onEndCallback = null;
@@ -205,7 +173,7 @@ export async function speak(
 
     await currentAudio.play();
   } catch (e) {
-    console.warn("ElevenLabs speak failed:", e);
+    console.warn("VoiceBox Clone speak failed:", e);
     onEndCallback?.();
     onEndCallback = null;
     throw e;
@@ -213,7 +181,7 @@ export async function speak(
 }
 
 /**
- * Stop current ElevenLabs playback
+ * Stop current VoiceBox Clone playback
  */
 export function stop(): void {
   if (currentAudio) {
@@ -225,7 +193,7 @@ export function stop(): void {
 }
 
 /**
- * Pause current ElevenLabs playback
+ * Pause current VoiceBox Clone playback
  */
 export function pause(): void {
   if (currentAudio) {
@@ -234,7 +202,7 @@ export function pause(): void {
 }
 
 /**
- * Resume paused ElevenLabs playback
+ * Resume paused VoiceBox Clone playback
  */
 export function resume(): void {
   if (currentAudio) {
@@ -243,14 +211,14 @@ export function resume(): void {
 }
 
 /**
- * Check if ElevenLabs is currently playing
+ * Check if VoiceBox Clone is currently playing
  */
 export function isSpeaking(): boolean {
   return currentAudio !== null && !currentAudio.paused;
 }
 
 /**
- * Check if ElevenLabs playback is paused
+ * Check if VoiceBox Clone playback is paused
  */
 export function isPaused(): boolean {
   return currentAudio !== null && currentAudio.paused;
@@ -288,4 +256,25 @@ export function setVolume(vol: number): void {
  */
 export function getVolume(): number {
   return currentVolumeLevel;
+}
+
+/**
+ * Get cached audio URL by cache key (for pre-cache integration)
+ */
+export function getCachedByKey(cacheKey: string): string | null {
+  return audioCache.get(cacheKey) || null;
+}
+
+/**
+ * Set cached audio URL by cache key (for pre-cache integration)
+ */
+export function setCachedByKey(cacheKey: string, blobUrl: string): void {
+  audioCache.set(cacheKey, blobUrl);
+}
+
+/**
+ * Generate a cache key for a given text and voiceId
+ */
+export function generateCacheKey(text: string, voiceId: string): string {
+  return hashKey(text, voiceId);
 }

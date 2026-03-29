@@ -3,7 +3,7 @@
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { VoiceSelector } from "@/components/settings";
+import { VoiceSelector, VoiceBoxCloneSettings } from "@/components/settings";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { LANGUAGE_LABELS, type CommandLanguage } from "@/lib/i18n/voiceCommands";
 import { resetHints } from "@/lib/commandHints";
@@ -19,6 +19,11 @@ export default function SettingsPage() {
         {/* Voice Selection */}
         <Card>
           <VoiceSelector />
+        </Card>
+
+        {/* Local TTS Server */}
+        <Card>
+          <VoiceBoxCloneSettings />
         </Card>
 
         {/* Speech Rate */}

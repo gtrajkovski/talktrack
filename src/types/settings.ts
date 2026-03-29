@@ -27,6 +27,10 @@ export interface UserSettings {
   hasSelectedVoice: boolean;
   // Granularity (Prompt 06)
   defaultGranularity: Granularity;
+  // VoiceBox Clone settings (local TTS server)
+  useVoiceBoxClone: boolean;
+  voiceBoxCloneUrl: string;
+  voiceBoxCloneVoiceId: string;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -55,4 +59,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   hasSelectedVoice: false,
   // Granularity default
   defaultGranularity: "slide",
+  // VoiceBox Clone defaults
+  useVoiceBoxClone: false,
+  voiceBoxCloneUrl: "http://localhost:5000",
+  voiceBoxCloneVoiceId: "",
 };

@@ -19,6 +19,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
 import { useChunkNavigation } from "@/hooks/useChunkNavigation";
+import { usePrecache } from "@/hooks/usePrecache";
 import type { Slide } from "@/types/talk";
 
 interface TestModeProps {
@@ -45,7 +46,19 @@ export function TestMode({
   onComplete,
   onUsedHelp,
 }: TestModeProps) {
-  const { speechRate, voiceName, showTimer, timerWarningSeconds, commandLanguage } = useSettingsStore();
+  const {
+    speechRate,
+    voiceName,
+    showTimer,
+    timerWarningSeconds,
+    commandLanguage,
+    useElevenLabs,
+    elevenLabsApiKey,
+    elevenLabsVoiceId,
+    useVoiceBoxClone,
+    voiceBoxCloneUrl,
+    voiceBoxCloneVoiceId,
+  } = useSettingsStore();
   const { setAudioState, setLastCommand, setTranscript: setStoreTranscript, clearTranscript } = useRehearsalStore();
   const canRecord = isRecordingSupported();
   const commands = getCommands(commandLanguage);
@@ -56,6 +69,9 @@ export function TestMode({
 
   // Sync earcons with settings and play on state transitions
   useEarconSync();
+
+  // Pre-cache upcoming chunks for smoother playback
+  usePrecache();
 
   // Chunk-aware navigation
   const {
@@ -267,12 +283,20 @@ export function TestMode({
     voicebox.play(promptText, {
       rate: speechRate,
       voiceName: voiceName || undefined,
+      voiceBoxClone: useVoiceBoxClone ? {
+        serverUrl: voiceBoxCloneUrl,
+        voiceId: voiceBoxCloneVoiceId,
+      } : undefined,
+      elevenLabs: !useVoiceBoxClone && useElevenLabs ? {
+        apiKey: elevenLabsApiKey,
+        voiceId: elevenLabsVoiceId,
+      } : undefined,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript]);
 
   const handleHelp = useCallback(() => {
     stopListening();
@@ -285,12 +309,20 @@ export function TestMode({
     voicebox.play(currentSlide.notes, {
       rate: speechRate,
       voiceName: voiceName || undefined,
+      voiceBoxClone: useVoiceBoxClone ? {
+        serverUrl: voiceBoxCloneUrl,
+        voiceId: voiceBoxCloneVoiceId,
+      } : undefined,
+      elevenLabs: !useVoiceBoxClone && useElevenLabs ? {
+        apiKey: elevenLabsApiKey,
+        voiceId: elevenLabsVoiceId,
+      } : undefined,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.notes, speechRate, voiceName, startListening, stopListening, onUsedHelp, setAudioState]);
+  }, [currentSlide.notes, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
