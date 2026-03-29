@@ -1,0 +1,690 @@
+================================================================================
+                    TALKTRACK - VOICE-FIRST REHEARSAL COACH
+                         Complete Project Documentation
+                              Generated: 2026-03-28
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. Project Overview
+2. Tech Stack
+3. Project Structure
+4. Data Models
+5. Core Features & Implementation Status
+6. Voice Commands Specification
+7. Design System
+8. Scoring Algorithm
+9. Speech Implementation Notes
+10. Build Instructions
+11. Development Commands
+12. Deferred Work & Backlog
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+TalkTrack is a mobile-first web app that lets people rehearse spoken content
+(presentations, speeches, pitches, scripts, sermons, lines) entirely hands-free
+and eyes-free.
+
+CORE USE CASE:
+Someone driving to a conference who wants to rehearse their presentation using
+only their voice and ears.
+
+KEY DIFFERENTIATOR:
+No existing tool does this. PowerPoint Speaker Coach, Orai, Speeko, and Yoodli
+all require looking at a screen. TalkTrack is the first rehearsal tool designed
+for commuters - 100% voice+ears, designed for driving.
+
+CURRENT STATUS (as of 2026-03-28):
+- Prompts 01-07: ALL COMPLETE
+- Tests: 191 passing
+- Build: Clean (zero warnings)
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+Framework:       Next.js 14+ (App Router)
+Language:        TypeScript
+Styling:         Tailwind CSS 3.x
+State:           Zustand (lightweight, no boilerplate)
+Speech Synth:    Web Speech API (SpeechSynthesis) with fallback to browser defaults
+Speech Recog:    Web Speech API (SpeechRecognition / webkitSpeechRecognition)
+File Parsing:    mammoth (for .docx), jszip + custom XML parser (for .pptx)
+Audio:           Web Audio API for chimes/tones between slides
+PWA:             next-pwa for installable mobile experience with offline support
+Database:        IndexedDB via idb for local storage of talks, progress, recordings
+Hosting:         Vercel
+Testing:         Vitest + React Testing Library
+
+TTS Engine Priority:
+1. VoiceBox Clone (local server at localhost:17493)
+2. ElevenLabs (BYOK - Bring Your Own Key)
+3. Web Speech API (browser native)
+
+================================================================================
+3. PROJECT STRUCTURE
+================================================================================
+
+talktrack/
+├── CLAUDE.md
+├── PROJECT.md
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+├── next.config.ts
+├── public/
+│   ├── manifest.json
+│   ├── icons/
+│   ├── sounds/
+│   │   ├── chime.mp3
+│   │   ├── start.mp3
+│   │   └── complete.mp3
+│   └── sw.js
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── talk/
+│   │   │   ├── [id]/
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── rehearse/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── slides/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── stats/
+│   │   │   │       └── page.tsx
+│   │   ├── import/
+│   │   │   └── page.tsx
+│   │   └── settings/
+│   │       └── page.tsx
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Card.tsx
+│   │   │   ├── ProgressBar.tsx
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   └── BigTapButton.tsx
+│   │   ├── rehearsal/
+│   │   │   ├── ListenMode.tsx
+│   │   │   ├── PromptMode.tsx
+│   │   │   ├── TestMode.tsx
+│   │   │   ├── SlideHeader.tsx
+│   │   │   ├── VoiceStatus.tsx
+│   │   │   ├── RehearsalControls.tsx
+│   │   │   ├── StateOrb.tsx
+│   │   │   ├── SpeedBadge.tsx
+│   │   │   ├── VolumeBadge.tsx
+│   │   │   └── CompletionScreen.tsx
+│   │   ├── import/
+│   │   │   ├── PasteImport.tsx
+│   │   │   ├── FileUpload.tsx
+│   │   │   └── VoiceRecord.tsx
+│   │   ├── settings/
+│   │   │   ├── VoiceBoxCloneSettings.tsx
+│   │   │   └── VoicePickerModal.tsx
+│   │   └── layout/
+│   │       ├── AppShell.tsx
+│   │       ├── BottomNav.tsx
+│   │       └── Header.tsx
+│   ├── hooks/
+│   │   ├── useRehearsalCommands.ts
+│   │   └── usePrecache.ts
+│   ├── lib/
+│   │   ├── speech/
+│   │   │   ├── synthesis.ts
+│   │   │   ├── recognition.ts
+│   │   │   ├── voiceCommands.ts
+│   │   │   ├── voices.ts
+│   │   │   ├── elevenlabs.ts
+│   │   │   ├── voiceboxClone.ts
+│   │   │   ├── voicebox.ts
+│   │   │   └── precache.ts
+│   │   ├── audio/
+│   │   │   ├── chime.ts
+│   │   │   └── earcons.ts
+│   │   ├── parsers/
+│   │   │   ├── pptx.ts
+│   │   │   ├── docx.ts
+│   │   │   ├── text.ts
+│   │   │   └── markdown.ts
+│   │   ├── db/
+│   │   │   ├── index.ts
+│   │   │   ├── talks.ts
+│   │   │   ├── sessions.ts
+│   │   │   └── recordings.ts
+│   │   ├── scoring/
+│   │   │   ├── similarity.ts
+│   │   │   ├── pacing.ts
+│   │   │   └── fillerWords.ts
+│   │   ├── chunker.ts
+│   │   ├── commandHints.ts
+│   │   └── utils/
+│   │       ├── wordCount.ts
+│   │       ├── estimateTime.ts
+│   │       └── formatDuration.ts
+│   ├── stores/
+│   │   ├── rehearsalStore.ts
+│   │   ├── settingsStore.ts
+│   │   └── talksStore.ts
+│   └── types/
+│       ├── talk.ts
+│       ├── session.ts
+│       └── settings.ts
+└── tests/
+    ├── parsers/
+    │   ├── pptx.test.ts
+    │   ├── text.test.ts
+    │   └── markdown.test.ts
+    ├── speech/
+    │   └── voiceCommands.test.ts
+    └── scoring/
+        └── similarity.test.ts
+
+================================================================================
+4. DATA MODELS
+================================================================================
+
+// types/talk.ts
+interface Talk {
+  id: string;                    // nanoid
+  title: string;
+  slides: Slide[];
+  createdAt: number;
+  updatedAt: number;
+  totalRehearsals: number;
+  source: "paste" | "pptx" | "docx" | "voice" | "demo";
+}
+
+interface Slide {
+  id: string;
+  index: number;
+  title: string;
+  notes: string;
+  wordCount: number;
+  estimatedSeconds: number;      // wordCount / wordsPerMinute * 60
+  timesRehearsed: number;
+  lastScore?: number;            // 0-100 similarity score
+  keyPhrases?: string[];
+}
+
+// types/session.ts
+interface RehearsalSession {
+  id: string;
+  talkId: string;
+  mode: "listen" | "prompt" | "test";
+  startedAt: number;
+  completedAt?: number;
+  slidesCompleted: number;
+  totalSlides: number;
+  attempts: SlideAttempt[];
+}
+
+interface SlideAttempt {
+  slideId: string;
+  slideIndex: number;
+  spokenText?: string;
+  similarityScore?: number;
+  wordsPerMinute?: number;
+  fillerWordCount?: number;
+  duration?: number;
+  usedHelp: boolean;
+}
+
+interface ChunkAttempt {
+  chunkId: string;
+  slideId: string;
+  chunkIndex: number;
+  spokenText?: string;
+  similarityScore?: number;
+  duration?: number;
+}
+
+// types/settings.ts
+interface UserSettings {
+  voiceName: string;
+  speechRate: number;            // 0.7 - 1.3 (default 0.95)
+  autoAdvance: boolean;          // default true
+  autoAdvanceDelay: number;      // seconds (default 1)
+  showWordCount: boolean;
+  enableVoiceCommands: boolean;  // default TRUE - voice is primary input
+  theme: "dark" | "light";       // default dark
+  wordsPerMinute: number;        // default 100
+  defaultGranularity: "slide" | "paragraph" | "sentence";
+  // ElevenLabs BYOK
+  elevenLabsApiKey?: string;
+  elevenLabsVoiceId?: string;
+  elevenLabsModel?: string;
+  // VoiceBox Clone
+  voiceBoxCloneEnabled: boolean;
+  voiceBoxCloneUrl: string;      // default "http://localhost:17493"
+  voiceBoxCloneVoice?: string;
+}
+
+================================================================================
+5. CORE FEATURES & IMPLEMENTATION STATUS
+================================================================================
+
+PROMPT 01 - Voice-First UX Overhaul [COMPLETE]
+----------------------------------------------
+- Earcon feedback system (src/lib/audio/earcons.ts)
+- Glanceable rehearsal screen / StateOrb (src/components/rehearsal/StateOrb.tsx)
+- Progressive command disclosure (src/lib/commandHints.ts)
+- Multimodal state sync (audioState in rehearsalStore)
+- Patience mode + graceful error recovery
+- Positive reinforcement + session completion
+
+PROMPT 02 - Audio-First Enforcement Audit [COMPLETE]
+-----------------------------------------------------
+- Map every interaction point (VOICE/AUTO/TAP classification)
+- Listen Mode fully automatic (sentence chunking, auto-advance)
+- Prompt Mode recognition lifecycle (aggressive restart, iOS handoff)
+- Test Mode auto-scoring with transcript accumulation
+- Voice command detection (ends-with matching, debounce)
+- CompletionScreen voice-driven ("again"/"done")
+- All tap handlers demoted to fallback
+- Gap elimination (pre-warm recognition)
+- Earcons for every state change
+
+PROMPT 03 - Voice Selection Overhaul [COMPLETE]
+-----------------------------------------------
+Tier 1: Browser Voice Picker
+- Curated voice registry (voices.ts)
+- Smart voice matcher with quality tiers
+- Voice picker in Settings with grouping
+- Preview button with sample sentence
+
+Tier 2: ElevenLabs BYOK
+- ElevenLabs client (elevenlabs.ts)
+- Unified speak() function routing
+- Settings UI for API key, voice, model
+- Quota display and validation
+
+Tier 3: Voice Preview
+- Quick preview in Settings
+- First-run voice picker modal (VoicePickerModal.tsx)
+
+Tier 4: Offline Resilience
+- Auto-fallback to browser TTS when offline
+- In-session audio caching
+
+PROMPT 04 - VoiceBox Clone + Playback Controls [COMPLETE]
+----------------------------------------------------------
+Part 1: VoiceBox Integration
+- voicebox.ts - playback progress wrapper for unified TTS
+- PlaybackIndicator with progress tracking
+- VoiceBox Clone local TTS server client (voiceboxClone.ts)
+- VoiceBox Clone settings UI (VoiceBoxCloneSettings.tsx)
+- TTS routing: VoiceBox Clone > ElevenLabs > Web Speech API
+
+Part 2: Voice Playback Controls
+- Speed commands: "faster", "slower", "normal speed"
+- Navigation: "go to slide N", "first slide", "last slide"
+- Info queries: "where am I", "how many left", "time remaining"
+- useRehearsalCommands shared hook (src/hooks/useRehearsalCommands.ts)
+- Speed change earcons (speedUp, speedDown, navigationJump, infoQuery)
+- Visual speed badge (SpeedBadge.tsx integrated into StateOrb)
+- Speed multiplier state in rehearsalStore
+- Voice commands in all 4 languages (EN, MK, SQ, IT)
+- parseGoToSlideNumber() for "go to slide 5" parsing
+
+PROMPT 05 - Complete Voice-Driven Audio Controls [COMPLETE]
+------------------------------------------------------------
+1. Volume Controls
+- Volume system in synthesis.ts
+- Commands: louder, quieter, maxVolume, mute, unmute (all 4 languages)
+- Visual volume indicator (VolumeBadge component)
+
+2. Slide Bookmarking
+- bookmarkedSlides in rehearsalStore (Set<string>)
+- Commands: bookmark, listBookmarks, practiceBookmarks, clearBookmarks
+- bookmarkAdded/bookmarkRemoved earcons
+
+3. Score & Progress Queries
+- Commands: howDidIDo, myAverage, worstSlides
+- HARD_SCORE_THRESHOLD constant (50)
+- getHardSlideIndices() in store
+
+4. Smart Practice Modes
+- practiceMode state ('all' | 'bookmarksOnly' | 'hardOnly')
+- getFilteredSlideIndices() in store
+- Commands: hardOnly, allSlides
+- Auto-navigate to first filtered slide
+
+5. Repeat Variations
+- Commands: repeatSlowly, repeatTitle
+- onRepeatSlowly/onRepeatTitle callback options
+
+6. Full Command Reference: 35+ commands across all languages
+
+PROMPT 06 - Rehearsal Granularity [CORE COMPLETE]
+-------------------------------------------------
+1. Content Chunking Engine
+- chunker.ts with chunkSlide(), chunkTalk()
+- Smart sentence splitter (handles abbreviations, decimals, ellipsis)
+- Merge short sentences (<5 words)
+- generateCue() for sentence first-3-words
+- formatPositionLabel() for chunk progress display
+
+2. Store Updates
+- granularity, chunks, currentChunkIndex in rehearsalStore
+- setGranularity(), rebuildChunks(), advanceChunk(), goBackChunk()
+- getCurrentChunk(), isLastChunk(), isFirstChunk(), getChunkProgress()
+- Auto-rebuild chunks on session start/resume
+
+3. Chunk-Level Scoring
+- ChunkAttempt type in session.ts
+- aggregateChunkScores() for slide-level rollup
+- getChunkFeedback() qualitative feedback
+
+4. Voice Commands
+- sentenceMode, paragraphMode, slideMode, whatMode (all 4 languages)
+- handleGranularityCommand in useRehearsalCommands
+- Mid-session switching with position preservation
+
+5. New Earcons
+- paragraphBreak() - subtle G4 tone
+- sentenceAdvance() - quick soft ping
+- modeChange() - two-tone indicating granularity switch
+
+6. Integration
+- Bookmarking at chunk level
+- Pre-cache audio at sentence level (precache.ts, usePrecache.ts)
+
+PROMPT 07 - Final Triple-Pass Audit [COMPLETE]
+----------------------------------------------
+Pass 1: Infrastructure, Build & Runtime
+- TypeScript - zero errors, no `any` types, no unused imports/vars
+- ESLint - zero errors, all warnings resolved
+- Dependencies - clean (no peer conflicts)
+- Config audit - tsconfig strict, next.config with PWA, Tailwind v4
+- File structure - no circular imports (verified with madge)
+- IndexedDB schema - proper v1->v2->v3 migrations
+- PWA - manifest fixed, meta tags in layout.tsx
+- Security - no hardcoded secrets, only user-provided BYOK
+
+Pass 2: UX Flows & State Machine
+- State machine audit - no stuck states, proper cleanup on unmount
+- Speech edge cases - Chrome Android chunking, iOS 300ms buffer
+- Voice command accuracy - 500ms debounce, last-5-words matching
+- Earcon integration - all 18+ earcons wired
+- Progressive hints - frequency logic OK
+
+Pass 3: Polish, Performance, Accessibility
+- CSS animations use GPU (transform/opacity)
+- Zustand granular selectors
+- 14 aria/role attrs, prefers-reduced-motion support
+- 48px min touch targets
+- 53 try/catch blocks, graceful fallbacks
+- 375px viewport OK, dark theme
+- Production build - zero warnings
+
+================================================================================
+6. VOICE COMMANDS SPECIFICATION
+================================================================================
+
+COMMANDS BY CATEGORY:
+
+Navigation:
+  next       ["next", "next slide", "forward", "continue", "skip", "move on"]
+  back       ["back", "previous", "go back", "last slide", "before"]
+  repeat     ["repeat", "again", "say that again", "one more time", "replay"]
+  goToSlide  ["go to slide N", "slide N", "jump to N"]
+  firstSlide ["first slide", "beginning", "start over"]
+  lastSlide  ["last slide", "end", "final slide"]
+
+Reveal/Help:
+  reveal     ["reveal", "show me", "tell me", "what is it", "answer"]
+  help       ["help", "hint", "i need help", "stuck", "i don't know"]
+
+Playback Control:
+  stop       ["stop", "pause", "hold on", "wait"]
+  resume     ["resume", "continue", "go", "keep going", "start"]
+  faster     ["faster", "speed up", "quicker"]
+  slower     ["slower", "slow down"]
+  normalSpeed ["normal speed", "regular speed", "reset speed"]
+
+Volume:
+  louder     ["louder", "volume up", "turn up"]
+  quieter    ["quieter", "softer", "volume down", "turn down"]
+  maxVolume  ["max volume", "maximum volume", "full volume"]
+  mute       ["mute", "silence"]
+  unmute     ["unmute", "sound on"]
+
+Info Queries:
+  whereAmI   ["where am i", "what slide", "current slide"]
+  howManyLeft ["how many left", "slides remaining", "how much left"]
+  timeRemaining ["time remaining", "how long left", "time left"]
+  howDidIDo  ["how did i do", "my score", "how was that"]
+  myAverage  ["my average", "average score", "overall score"]
+  worstSlides ["worst slides", "hard slides", "struggling with"]
+
+Bookmarking:
+  bookmark   ["bookmark", "mark this", "save this"]
+  listBookmarks ["list bookmarks", "show bookmarks", "my bookmarks"]
+  practiceBookmarks ["practice bookmarks", "bookmarked only"]
+  clearBookmarks ["clear bookmarks", "remove bookmarks"]
+
+Practice Modes:
+  hardOnly   ["hard only", "difficult only", "practice hard"]
+  allSlides  ["all slides", "everything", "full practice"]
+
+Granularity:
+  sentenceMode ["sentence mode", "by sentence", "sentences"]
+  paragraphMode ["paragraph mode", "by paragraph", "paragraphs"]
+  slideMode  ["slide mode", "by slide", "whole slides"]
+  whatMode   ["what mode", "current mode"]
+
+Repeat Variations:
+  repeatSlowly ["repeat slowly", "say slowly", "slower repeat"]
+  repeatTitle ["repeat title", "title again", "slide title"]
+
+Section Navigation:
+  nextSection ["next section", "next part"]
+  prevSection ["previous section", "last section"]
+  goToSection ["go to section N", "section N"]
+  listSections ["list sections", "what sections"]
+
+Completion:
+  again      ["again", "one more time", "restart"]
+  done       ["done", "finish", "exit", "i'm done"]
+
+MATCHING ALGORITHM:
+- Match against last 5 words of continuous recognition transcript
+- 500ms debounce between command executions
+- Mode-specific command filtering
+
+SUPPORTED LANGUAGES:
+- English (EN)
+- Macedonian (MK)
+- Albanian (SQ)
+- Italian (IT)
+
+================================================================================
+7. DESIGN SYSTEM
+================================================================================
+
+COLORS (CSS Variables):
+  --bg:            #0f1729
+  --surface:       #1a2744
+  --surface-light: #243352
+  --accent:        #f59e0b        (Amber)
+  --accent-dim:    #b45309
+  --blue:          #3b82f6
+  --text:          #f1f5f9
+  --text-dim:      #94a3b8
+  --success:       #22c55e
+  --danger:        #ef4444
+  --radius:        16px
+  --radius-sm:     12px
+
+TYPOGRAPHY:
+  Font: "Outfit" (Google Fonts, variable weight)
+  Titles: 800 weight, -0.02em tracking
+  Body: 400 weight
+  UI labels: 600 weight, 0.05em tracking, uppercase
+
+TOUCH TARGETS:
+  Primary action buttons: min 60px tall, full width
+  Control buttons (Back/Repeat/Next): min 52px tall, equal-width flex row
+  No small icons or links - everything tappable with a thumb
+
+ANIMATIONS:
+  Slide transitions: 200ms fade
+  Progress bar: 400ms ease width transition
+  Button press: scale(0.97) on active (100ms)
+  Keep minimal - utility app, not visual showcase
+
+================================================================================
+8. SCORING ALGORITHM
+================================================================================
+
+1. Normalize both strings (lowercase, remove punctuation, trim)
+2. Tokenize into words
+3. Remove stop words (the, a, an, is, was, are, etc.)
+4. Calculate overlap:
+   - contentWords = meaningful words from original notes
+   - spokenWords = meaningful words from user's speech
+   - hits = contentWords that appear in spokenWords
+   - score = (hits.length / contentWords.length) * 100
+5. Bonus: +5 points if user hits ALL key phrases
+6. Cap at 100
+
+CHUNK-LEVEL FEEDBACK:
+  90-100: "Nailed it"
+  70-89:  "Close"
+  0-69:   "Not quite"
+
+HARD_SCORE_THRESHOLD: 50 (slides below this are flagged as "hard")
+
+================================================================================
+9. SPEECH IMPLEMENTATION NOTES
+================================================================================
+
+SYNTHESIS GOTCHAS:
+- speechSynthesis.getVoices() returns empty on first call. Use voiceschanged event.
+- iOS Safari: speech synthesis requires user gesture. First speak() must be inside
+  click/tap handler.
+- Chrome Android: sometimes stops mid-sentence. Break long notes into sentences
+  and chain.
+- Always speechSynthesis.cancel() before new speech.
+
+RECOGNITION GOTCHAS:
+- webkitSpeechRecognition is correct on most browsers (not SpeechRecognition).
+- Set continuous = true and interimResults = true.
+- Auto-stops after silence - restart in onend handler if session active.
+- iOS: recognition and synthesis cannot run simultaneously. Stop synthesis first.
+
+PWA / MOBILE:
+- Test on actual phones, not just DevTools responsive mode.
+- iOS Safari has limited Speech Recognition - feature-detect + graceful fallback.
+- <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+- <meta name="apple-mobile-web-app-capable" content="yes">
+
+PERFORMANCE:
+- IndexedDB operations are async - never block UI.
+- PPTX parsing can be slow - show progress, parse in Web Worker if possible.
+- Keep rehearsal screen React tree shallow - re-renders during speech cause
+  stuttering.
+
+================================================================================
+10. BUILD INSTRUCTIONS
+================================================================================
+
+INITIAL SETUP:
+  npx create-next-app@latest . --typescript --tailwind --app --src-dir --eslint
+  npm install zustand idb jszip mammoth nanoid
+
+DEPENDENCIES:
+  {
+    "dependencies": {
+      "next": "^14.2",
+      "react": "^18.3",
+      "react-dom": "^18.3",
+      "zustand": "^4.5",
+      "idb": "^8.0",
+      "jszip": "^3.10",
+      "mammoth": "^1.8",
+      "nanoid": "^5.0"
+    },
+    "devDependencies": {
+      "typescript": "^5.4",
+      "tailwindcss": "^3.4",
+      "autoprefixer": "^10.4",
+      "postcss": "^8.4",
+      "@types/react": "^18.3",
+      "@types/node": "^20",
+      "vitest": "^1.6",
+      "@testing-library/react": "^15",
+      "eslint": "^8.57",
+      "eslint-config-next": "^14.2"
+    }
+  }
+
+================================================================================
+11. DEVELOPMENT COMMANDS
+================================================================================
+
+  npm install          # Install dependencies
+  npm run dev          # Development server
+  npm run build        # Build for production
+  npm test             # Run tests (191 tests passing)
+  npx tsc --noEmit     # Type check
+  npm run lint         # Lint
+
+================================================================================
+12. DEFERRED WORK & BACKLOG
+================================================================================
+
+UI INTEGRATION (Optional Polish):
+- [ ] ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
+- [ ] PromptMode: first-3-words cue for sentences, paragraph labels
+- [ ] TestMode: pure recall (sentence number only, no cue)
+- [ ] Progress bar reflects chunk count
+- [ ] Granularity selector in Settings page
+
+DATA PERSISTENCE:
+- [ ] Persist bookmarks to IndexedDB per-talk
+- [ ] Auto-bookmark on score < 50
+
+ADDITIONAL FEATURES:
+- [ ] Session timer display
+
+TESTING & VERIFICATION:
+- [ ] 8 user journeys - manual testing
+- [ ] Additional test coverage (earcons, voiceCommands)
+- [ ] Data integrity verification
+
+MANUAL TESTING CHECKLIST:
+- [ ] New user onboarding
+- [ ] Prompt mode rehearsal
+- [ ] Test mode rehearsal
+- [ ] PPTX import flow
+- [ ] DOCX import flow
+- [ ] Session resume
+- [ ] Settings changes
+- [ ] Stats review
+
+DATA INTEGRITY:
+- [ ] Session persistence across reload
+- [ ] Cascade delete (talk -> sessions)
+- [ ] Export correctness
+
+================================================================================
+QUALITY BAR
+================================================================================
+
+- Every screen works on 375px wide viewport (iPhone SE)
+- Touch targets 48px minimum, 60px preferred for primary actions
+- Dark theme by default (driving at night)
+- Zero external API calls - everything client-side (except optional ElevenLabs)
+- Works offline after first load (PWA)
+- No loading spinners longer than 200ms - optimistic UI
+- Accessible: all buttons have labels, screen reader compatible
+- Rehearsal screen feels like a podcast player, not a slide deck
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================
