@@ -7,6 +7,7 @@ import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
 import { TimerOverlay } from "./TimerOverlay";
+import { SessionTimer } from "./SessionTimer";
 import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import { PlaybackIndicator } from "./PlaybackIndicator";
@@ -426,11 +427,20 @@ export function TestMode({
       </div>
 
       {showTimer && (
-        <TimerOverlay
-          totalSeconds={currentSlide.estimatedSeconds}
-          warningSeconds={timerWarningSeconds}
-          isActive={status === "listening"}
-        />
+        <div className="px-4 mb-4 space-y-2">
+          {/* Session elapsed time */}
+          <div className="flex justify-center">
+            <SessionTimer
+              totalEstimatedSeconds={slides.reduce((sum, s) => sum + (s.estimatedSeconds || 0), 0)}
+            />
+          </div>
+          {/* Per-slide countdown */}
+          <TimerOverlay
+            totalSeconds={currentSlide.estimatedSeconds}
+            warningSeconds={timerWarningSeconds}
+            isActive={status === "listening"}
+          />
+        </div>
       )}
 
       {/* Glanceable center area */}

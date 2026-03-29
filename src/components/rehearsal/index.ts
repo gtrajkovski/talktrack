@@ -7,6 +7,7 @@ export { PromptMode } from "./PromptMode";
 export { TestMode } from "./TestMode";
 export { TranscriptScore } from "./TranscriptScore";
 export { TimerOverlay } from "./TimerOverlay";
+export { SessionTimer } from "./SessionTimer";
 export { PlaybackIndicator, PlaybackBar } from "./PlaybackIndicator";
 export { StateOrb } from "./StateOrb";
 export { SpeedBadge } from "./SpeedBadge";

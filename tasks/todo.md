@@ -205,9 +205,9 @@
 - [x] Persist bookmarks to IndexedDB per-talk (db/bookmarks.ts)
 - [x] Auto-bookmark on score < 50 (rehearsalStore.ts:recordAttempt)
 
-**Additional Features:** ✅ SECTION NAV COMPLETE
+**Additional Features:** ✅ ALL COMPLETE
 - [x] Section navigation commands (nextSection, prevSection, goToSection, listSections)
-- [ ] Session timer display
+- [x] Session timer display (SessionTimer component in all modes)
 
 **Testing & Verification:**
 - [ ] 8 user journeys — manual testing

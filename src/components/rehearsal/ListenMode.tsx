@@ -5,6 +5,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { PlaybackIndicator } from "./PlaybackIndicator";
+import { SessionTimer } from "./SessionTimer";
 import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import * as earcons from "@/lib/audio/earcons";
@@ -46,6 +47,7 @@ export function ListenMode({
     useVoiceBoxClone,
     voiceBoxCloneUrl,
     voiceBoxCloneVoiceId,
+    showTimer,
   } = useSettingsStore();
   const { setAudioState, setLastCommand } = useRehearsalStore();
   const commands = getCommands(commandLanguage);
@@ -408,6 +410,15 @@ export function ListenMode({
           <p className="text-sm text-text-dim mt-1">{positionLabel}</p>
         )}
       </div>
+
+      {/* Session timer */}
+      {showTimer && (
+        <div className="flex justify-center mb-4">
+          <SessionTimer
+            totalEstimatedSeconds={slides.reduce((sum, s) => sum + (s.estimatedSeconds || 0), 0)}
+          />
+        </div>
+      )}
 
       {/* Glanceable state indicator */}
       <div className="flex justify-center mb-2">
