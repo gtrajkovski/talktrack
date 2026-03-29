@@ -1,8 +1,9 @@
 # TalkTrack — Active Work
 
 ## Current Status
-- **Prompts 01-06:** Core complete
-- **Next:** Prompt 07 (Final Triple-Pass Audit)
+- **Prompts 01-07:** ✅ ALL COMPLETE
+- **Tests:** 191 passing
+- **Build:** Clean (zero warnings)
 
 ## Prompt Reference
 
@@ -191,28 +192,30 @@
 
 ---
 
-## Completed This Session
+## Deferred Items (Optional Polish)
 
-- [x] Completed Prompt 05: Complete Voice-Driven Audio Controls
-  - Added bookmark state to rehearsalStore (bookmarkedSlides, practiceMode)
-  - Implemented bookmark handlers (bookmark, listBookmarks, practiceBookmarks, clearBookmarks)
-  - Implemented score query handlers (howDidIDo, myAverage, worstSlides)
-  - Implemented repeat variation handlers (repeatSlowly, repeatTitle)
-  - Implemented practice mode handlers (hardOnly, allSlides)
-  - Added getFilteredSlideIndices(), getHardSlideIndices() to store
-  - Wired all handlers into useRehearsalCommands hook
-  - TypeScript compiles clean, build passes
+**UI Integration:**
+- [ ] ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
+- [ ] PromptMode: first-3-words cue for sentences, paragraph labels
+- [ ] TestMode: pure recall (sentence number only, no cue)
+- [ ] Progress bar reflects chunk count
+- [ ] Granularity selector in Settings page
 
-- [x] ESLint audit pass 2 (prompt 07 continuation)
-  - Fixed setState-in-effect errors by using useMemo for derived state
-  - Fixed PlaybackIndicator/PlaybackBar with lazy useState initializers
-  - Fixed TimerOverlay with proper eslint-disable for prop sync
-  - Fixed startListening self-reference in PromptMode/TestMode using refs + useEffect
-  - Wrapped handler ref assignments in useEffect (PromptMode, TestMode)
-  - Added missing useCallback dependencies (setStoreTranscript)
-  - Moved ERROR_RETRY_DELAYS constants to module scope
-  - Added eslint-disable-next-line for intentional TTS init patterns
-  - Removed unused imports (Slide, SlideHeader, formatDuration, elevenLabs)
-  - Removed unused variables (wasBookmarked, sectionPattern, trailing, chunks, talk)
-  - Prefixed state tracking vars in synthesis.ts (_currentUtterance, _onEndCallback)
-  - All 22 ESLint issues resolved (9 errors, 13 warnings → 0)
+**Data Persistence:**
+- [ ] Persist bookmarks to IndexedDB per-talk
+- [ ] Auto-bookmark on score < 50
+
+**Additional Features:**
+- [ ] Section navigation commands (nextSection, prevSection, goToSection)
+- [ ] Session timer display
+
+**Testing & Verification:**
+- [ ] 8 user journeys — manual testing
+- [ ] Additional test coverage (earcons, voiceCommands)
+- [ ] Data integrity verification
+
+---
+
+## Completed (Archived)
+
+All 7 prompts complete as of 2026-03-28. See git history for details.
