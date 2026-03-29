@@ -21,6 +21,13 @@ export interface StreakData {
   longestStreak: number;
 }
 
+// Stored bookmark record (v4)
+export interface StoredBookmark {
+  talkId: string;
+  slideId: string;
+  createdAt: number;
+}
+
 interface TalkTrackDB extends DBSchema {
   talks: {
     key: string;
@@ -49,31 +56,36 @@ interface TalkTrackDB extends DBSchema {
     key: string;
     value: StreakData;
   };
+  bookmarks: {
+    key: [string, string]; // [talkId, slideId] compound key
+    value: StoredBookmark;
+    indexes: { "by-talk": string };
+  };
 }
 
 const DB_NAME = "talktrack";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<TalkTrackDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<TalkTrackDB>> {
   if (!dbPromise) {
     dbPromise = openDB<TalkTrackDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        // Talks store
+      upgrade(db, oldVersion) {
+        // Talks store (v1)
         if (!db.objectStoreNames.contains("talks")) {
           const talkStore = db.createObjectStore("talks", { keyPath: "id" });
           talkStore.createIndex("by-updated", "updatedAt");
         }
 
-        // Sessions store
+        // Sessions store (v1)
         if (!db.objectStoreNames.contains("sessions")) {
           const sessionStore = db.createObjectStore("sessions", { keyPath: "id" });
           sessionStore.createIndex("by-talk", "talkId");
           sessionStore.createIndex("by-started", "startedAt");
         }
 
-        // Settings store
+        // Settings store (v1)
         if (!db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "id" });
         }
@@ -94,6 +106,14 @@ export function getDB(): Promise<IDBPDatabase<TalkTrackDB>> {
         // Streaks store (added in v3) - for positive reinforcement
         if (!db.objectStoreNames.contains("streaks")) {
           db.createObjectStore("streaks", { keyPath: "id" });
+        }
+
+        // Bookmarks store (added in v4) - compound key [talkId, slideId]
+        if (oldVersion < 4 && !db.objectStoreNames.contains("bookmarks")) {
+          const bookmarkStore = db.createObjectStore("bookmarks", {
+            keyPath: ["talkId", "slideId"],
+          });
+          bookmarkStore.createIndex("by-talk", "talkId");
         }
       },
     });

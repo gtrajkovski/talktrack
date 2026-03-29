@@ -20,7 +20,18 @@
       "mcp__filesystem__list_directory",
       "mcp__filesystem__read_text_file",
       "Bash(npx eslint:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx madge:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(git push:*)",
+      "Bash(npm test:*)",
+      "Bash(where:*)",
+      "Bash(node scripts/generate-icons.mjs:*)",
+      "mcp__filesystem__search_files",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /PID 15616 /F\")",
+      "Bash(start:*)"
     ]
   }
 }

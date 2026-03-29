@@ -1,4 +1,5 @@
 import { getDB } from "./index";
+import { clearBookmarksForTalk } from "./bookmarks";
 import type { Talk, ScoreEntry } from "@/types/talk";
 
 export async function getAllTalks(): Promise<Talk[]> {
@@ -24,9 +25,37 @@ export async function updateTalk(talk: Talk): Promise<void> {
   await db.put("talks", talk);
 }
 
+/**
+ * Delete a talk and all associated data (cascade delete).
+ * Removes: sessions, recordings, bookmarks for this talk.
+ */
 export async function deleteTalk(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete("talks", id);
+
+  // Use a transaction for atomicity where possible
+  const tx = db.transaction(["talks", "sessions", "recordings"], "readwrite");
+
+  // Delete all sessions for this talk
+  const sessionsIndex = tx.objectStore("sessions").index("by-talk");
+  const sessionKeys = await sessionsIndex.getAllKeys(id);
+  for (const key of sessionKeys) {
+    await tx.objectStore("sessions").delete(key);
+  }
+
+  // Delete all recordings for this talk
+  const recordingsIndex = tx.objectStore("recordings").index("by-talk");
+  const recordingKeys = await recordingsIndex.getAllKeys(id);
+  for (const key of recordingKeys) {
+    await tx.objectStore("recordings").delete(key);
+  }
+
+  // Delete the talk itself
+  await tx.objectStore("talks").delete(id);
+
+  await tx.done;
+
+  // Delete bookmarks (separate transaction since it's a different store)
+  await clearBookmarksForTalk(id);
 }
 
 export async function incrementRehearsalCount(id: string): Promise<void> {

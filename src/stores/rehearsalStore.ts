@@ -5,6 +5,7 @@ import type { RehearsalSession, RehearsalMode, SlideAttempt } from "@/types/sess
 import { type Chunk, type Granularity, chunkTalk, findChunkBySlide } from "@/lib/utils/chunker";
 import * as sessionsDB from "@/lib/db/sessions";
 import * as talksDB from "@/lib/db/talks";
+import * as bookmarksDB from "@/lib/db/bookmarks";
 
 export type { Granularity } from "@/lib/utils/chunker";
 
@@ -22,6 +23,25 @@ export const SPEED_STEP = 0.1;
 
 // Score threshold for "hard" slides
 export const HARD_SCORE_THRESHOLD = 50;
+
+// Debounce delay for bookmark persistence (ms)
+const BOOKMARK_PERSIST_DELAY = 500;
+
+// Debounce timer for bookmark persistence
+let bookmarkPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Helper to debounce bookmark persistence
+function debouncedPersistBookmarks(talkId: string, bookmarks: Set<string>) {
+  if (bookmarkPersistTimer) {
+    clearTimeout(bookmarkPersistTimer);
+  }
+  bookmarkPersistTimer = setTimeout(() => {
+    bookmarksDB.saveBookmarks(talkId, bookmarks).catch((err) => {
+      console.warn("Failed to persist bookmarks:", err);
+    });
+    bookmarkPersistTimer = null;
+  }, BOOKMARK_PERSIST_DELAY);
+}
 
 interface RehearsalState {
   // Current session
@@ -48,6 +68,9 @@ interface RehearsalState {
 
   // Current attempt tracking
   currentAttempt: SlideAttempt | null;
+
+  // Session timer (Part 3)
+  sessionStartTime: number | null;
 
   // Multimodal state sync
   audioState: AudioState;
@@ -146,6 +169,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   chunks: [] as Chunk[],
   currentChunkIndex: 0,
 
+  // Session timer initial value
+  sessionStartTime: null,
+
   // Multimodal state sync initial values
   audioState: 'idle',
   lastCommand: null,
@@ -172,6 +198,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     const { granularity } = get();
     const chunks = chunkTalk(talk.slides, granularity);
 
+    // Load bookmarks from IndexedDB
+    const savedBookmarks = await bookmarksDB.loadBookmarks(talk.id);
+
     set({
       session,
       talk,
@@ -180,11 +209,14 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       isPaused: false,
       currentAttempt: null,
       speedMultiplier: DEFAULT_SPEED,
-      // Preserve bookmarks across sessions (don't reset)
+      // Load persisted bookmarks
+      bookmarkedSlides: savedBookmarks,
       practiceMode: 'all' as PracticeMode,
       // Initialize chunks
       chunks,
       currentChunkIndex: 0,
+      // Set session start time for timer
+      sessionStartTime: Date.now(),
     });
   },
 
@@ -194,9 +226,12 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     await sessionsDB.updateSession(session);
 
     // Rebuild chunks for the resumed session
-    const { granularity } = get();
+    const { granularity, practiceMode } = get();
     const chunks = chunkTalk(talk.slides, granularity);
     const chunkIndex = findChunkBySlide(chunks, session.currentSlideIndex);
+
+    // Load bookmarks from IndexedDB
+    const savedBookmarks = await bookmarksDB.loadBookmarks(talk.id);
 
     set({
       session,
@@ -207,6 +242,12 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       currentAttempt: null,
       chunks,
       currentChunkIndex: chunkIndex,
+      // Restore persisted bookmarks
+      bookmarkedSlides: savedBookmarks,
+      // Preserve practice mode
+      practiceMode,
+      // Set session start time for timer (use session.startedAt for resumed sessions)
+      sessionStartTime: session.startedAt,
     });
   },
 
@@ -215,6 +256,11 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     if (session) {
       session.completedAt = Date.now();
       await sessionsDB.updateSession(session);
+    }
+    // Clear any pending bookmark persist timer
+    if (bookmarkPersistTimer) {
+      clearTimeout(bookmarkPersistTimer);
+      bookmarkPersistTimer = null;
     }
     set({
       session: null,
@@ -230,6 +276,8 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       // Reset chunks but preserve granularity preference
       chunks: [] as Chunk[],
       currentChunkIndex: 0,
+      // Reset session timer
+      sessionStartTime: null,
     });
   },
 
@@ -309,11 +357,25 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
   },
 
   recordAttempt: (data: Partial<SlideAttempt>) => {
-    const { currentAttempt } = get();
+    const { currentAttempt, bookmarkedSlides, talk } = get();
     if (currentAttempt) {
-      set({
-        currentAttempt: { ...currentAttempt, ...data },
-      });
+      const updatedAttempt = { ...currentAttempt, ...data };
+      set({ currentAttempt: updatedAttempt });
+
+      // Auto-bookmark on low score
+      if (
+        data.similarityScore !== undefined &&
+        data.similarityScore < HARD_SCORE_THRESHOLD &&
+        talk
+      ) {
+        const newSet = new Set(bookmarkedSlides);
+        if (!newSet.has(currentAttempt.slideId)) {
+          newSet.add(currentAttempt.slideId);
+          set({ bookmarkedSlides: newSet });
+          // Persist to IndexedDB (debounced)
+          debouncedPersistBookmarks(talk.id, newSet);
+        }
+      }
     }
   },
 
@@ -392,9 +454,9 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
     return baseRate * speedMultiplier;
   },
 
-  // Bookmark actions
+  // Bookmark actions (with IndexedDB persistence)
   toggleBookmark: (slideId: string) => {
-    const { bookmarkedSlides } = get();
+    const { bookmarkedSlides, talk } = get();
     const newSet = new Set(bookmarkedSlides);
     const isNowBookmarked = !newSet.has(slideId);
     if (isNowBookmarked) {
@@ -403,25 +465,44 @@ export const useRehearsalStore = create<RehearsalState>((set, get) => ({
       newSet.delete(slideId);
     }
     set({ bookmarkedSlides: newSet });
+    // Persist to IndexedDB (debounced)
+    if (talk) {
+      debouncedPersistBookmarks(talk.id, newSet);
+    }
     return isNowBookmarked;
   },
 
   addBookmark: (slideId: string) => {
-    const { bookmarkedSlides } = get();
+    const { bookmarkedSlides, talk } = get();
     const newSet = new Set(bookmarkedSlides);
     newSet.add(slideId);
     set({ bookmarkedSlides: newSet });
+    // Persist to IndexedDB (debounced)
+    if (talk) {
+      debouncedPersistBookmarks(talk.id, newSet);
+    }
   },
 
   removeBookmark: (slideId: string) => {
-    const { bookmarkedSlides } = get();
+    const { bookmarkedSlides, talk } = get();
     const newSet = new Set(bookmarkedSlides);
     newSet.delete(slideId);
     set({ bookmarkedSlides: newSet });
+    // Persist to IndexedDB (debounced)
+    if (talk) {
+      debouncedPersistBookmarks(talk.id, newSet);
+    }
   },
 
   clearBookmarks: () => {
+    const { talk } = get();
     set({ bookmarkedSlides: new Set<string>() });
+    // Clear from IndexedDB immediately
+    if (talk) {
+      bookmarksDB.clearBookmarksForTalk(talk.id).catch((err) => {
+        console.warn("Failed to clear bookmarks:", err);
+      });
+    }
   },
 
   isBookmarked: (slideId: string) => {
