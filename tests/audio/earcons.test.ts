@@ -12,9 +12,7 @@ describe('Earcons', () => {
     earcons.setVolume(0.3);
 
     // Spy on AudioContext methods
-    const mockCtx = globalThis.AudioContext as unknown as {
-      prototype: { createOscillator: unknown; createGain: unknown; createBuffer: unknown };
-    };
+    const mockCtx = globalThis.AudioContext;
     if (mockCtx?.prototype) {
       createOscillatorSpy = vi.spyOn(mockCtx.prototype, 'createOscillator');
       createGainSpy = vi.spyOn(mockCtx.prototype, 'createGain');

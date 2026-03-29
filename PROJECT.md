@@ -10,13 +10,14 @@ Mobile-first web app that lets people rehearse spoken content (presentations, sp
 - JSZip for .pptx parsing, Mammoth for .docx, pdfjs-dist for PDF
 - @mozilla/readability + linkedom for URL content extraction
 - PWA via next-pwa for offline support
-- Vitest for testing (323 tests)
+- Vitest + React Testing Library (611 tests)
 - Hosted on Vercel
 
 ## Status
-- **Current Phase**: Prompts 01-09 complete
-- **Tests**: 323 passing
+- **Current Phase**: Prompts 01-10 complete
+- **Tests**: 611 passing
 - **Build**: Clean
+- **TypeScript**: Clean
 
 ## Completed Features
 - Voice-first UX with earcons and StateOrb
@@ -26,7 +27,20 @@ Mobile-first web app that lets people rehearse spoken content (presentations, sp
 - Granularity: slide/paragraph/sentence modes
 - Bookmarking, scoring, session timer
 - ElevenLabs BYOK TTS integration
+- VoiceBox Clone local TTS support
+- Audio pre-cache for reduced latency
+- CSV export for talk stats
 - Offline-first PWA
 
 ## Key Differentiator
 No existing tool (PowerPoint Speaker Coach, Orai, Speeko, Yoodli) works without looking at a screen. TalkTrack is 100% voice+ears, designed for driving.
+
+## Development Commands
+```bash
+npm install          # Install dependencies
+npm run dev          # Development server
+npm run build        # Build for production
+npm test             # Run tests (611 passing)
+npx tsc --noEmit     # Type check
+npm run lint         # Lint
+```

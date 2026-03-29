@@ -140,13 +140,14 @@ describe('Integration: Export Correctness', () => {
 
     it('7. Missing lastScore renders as empty', () => {
       const talk = makeMockTalk();
-      // Slide 2 has no lastScore
+      // Slide 2 (index 2) has no lastScore
       const csv = generateSlidesCsv(talk);
       const lines = csv.split('\n');
       const lastRow = lines[3]; // Third data row (slide 3)
 
-      // Should end with empty value (no score)
-      expect(lastRow.endsWith(',')).toBe(false); // Not trailing comma
+      // Should end with empty value (trailing comma for empty last field is valid CSV)
+      expect(lastRow).toMatch(/,$/); // Ends with comma (empty field)
+      expect(lastRow).not.toMatch(/,\d+$/); // Does NOT end with a number (no score)
     });
   });
 
@@ -255,8 +256,8 @@ describe('Integration: Export Correctness', () => {
       const sessions: RehearsalSession[] = [];
       const csv = generateFullCsv(talk, sessions);
 
-      // Should be properly escaped in the TALK: line
-      expect(csv).toContain('Talk, with "special" chars\nand newline');
+      // Should be properly escaped (quotes doubled, wrapped in quotes)
+      expect(csv).toContain('"Talk, with ""special"" chars\nand newline"');
     });
   });
 });

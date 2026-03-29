@@ -71,7 +71,7 @@ This is the content of the second slide.
 Slide Title Three
 This is the content of the third slide.`;
 
-      const result = parseText(text, 'Test Talk');
+      const result = parseText(text);
 
       // Verify parsing
       expect(result.slides.length).toBe(3);
@@ -105,19 +105,20 @@ This is the content of the third slide.`;
     });
 
     it('2. Parse markdown with headers → save → verify slide count matches header count', async () => {
-      const markdown = `# Introduction
+      // Note: # (H1) = section markers, ## (H2) = slide markers
+      const markdown = `## Introduction
 
 Welcome to the presentation.
 
-# Main Points
+## Main Points
 
 Here are the main points we'll cover.
 
-# Conclusion
+## Conclusion
 
 Thank you for listening.`;
 
-      const result = parseMarkdown(markdown, 'Markdown Talk');
+      const result = parseMarkdown(markdown);
 
       // Verify parsing
       expect(result.slides.length).toBe(3);
@@ -151,7 +152,7 @@ Content here.
 Second Section
 More content.`;
 
-      const result = parseText(text, 'Flow Test');
+      const result = parseText(text);
       const talk: Talk = {
         id: nanoid(),
         title: result.title,
@@ -184,7 +185,7 @@ More content.`;
       const text = `Title
 One two three four five six seven eight nine ten.`;
 
-      const result = parseText(text, 'Word Count Test');
+      const result = parseText(text);
       expect(result.slides[0].wordCount).toBeGreaterThan(0);
     });
 
@@ -192,7 +193,7 @@ One two three four five six seven eight nine ten.`;
       const text = `Title
 One two three four five six seven eight nine ten words here.`;
 
-      const result = parseText(text, 'Time Test');
+      const result = parseText(text);
       expect(result.slides[0].estimatedSeconds).toBeGreaterThan(0);
     });
 
@@ -206,7 +207,7 @@ Content.
 Slide Three
 Content.`;
 
-      const result = parseText(text, 'ID Test');
+      const result = parseText(text);
       const ids = result.slides.map(s => s.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
@@ -222,7 +223,7 @@ Content.
 C
 Content.`;
 
-      const result = parseText(text, 'Index Test');
+      const result = parseText(text);
       result.slides.forEach((slide, i) => {
         expect(slide.index).toBe(i);
       });

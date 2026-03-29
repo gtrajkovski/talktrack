@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TalkTrack
+
+**Voice-First Rehearsal Coach** — Practice presentations, speeches, and scripts hands-free while driving or commuting.
+
+## What Makes TalkTrack Different
+
+No existing rehearsal tool works without looking at a screen. PowerPoint Speaker Coach, Orai, Speeko, and Yoodli all require visual interaction. TalkTrack is 100% voice+ears, designed for people who want to practice during their commute.
+
+## Features
+
+- **3 Rehearsal Modes**: Listen (passive), Prompt (cued recall), Test (full recall with scoring)
+- **Voice-First Control**: 35+ voice commands in 4 languages (EN, MK, SQ, IT)
+- **Multiple Import Options**: Paste text, upload PPTX/DOCX/PDF, or import from URL
+- **Flexible Granularity**: Practice by slide, paragraph, or sentence
+- **Bookmarking**: Mark difficult sections for focused practice
+- **Session Timer**: Track your rehearsal time
+- **Offline PWA**: Works without internet after first load
+- **TTS Options**: Web Speech API, ElevenLabs BYOK, or VoiceBox Clone local server
+
+## Tech Stack
+
+- Next.js 14+ (App Router)
+- TypeScript
+- Tailwind CSS
+- Zustand (state management)
+- IndexedDB via idb (local storage)
+- Web Speech API (synthesis + recognition)
+- Vitest + React Testing Library (611 tests)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev          # Development server
+npm run build        # Production build
+npm test             # Run tests
+npx tsc --noEmit     # Type check
+npm run lint         # Lint
+```
 
-## Learn More
+## License
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

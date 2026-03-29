@@ -1,4 +1,5 @@
 import { vi, beforeEach, afterEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { MockSpeechSynthesis, MockUtterance, MockVoice } from './mocks/speechSynthesis';
 import { MockSpeechRecognition } from './mocks/speechRecognition';
