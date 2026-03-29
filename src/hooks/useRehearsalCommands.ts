@@ -7,7 +7,9 @@ import {
   getCommands,
   matchCommand,
   parseGoToSlideNumber,
+  parseGoToSectionCommand,
 } from "@/lib/i18n/voiceCommands";
+import type { Slide } from "@/types/talk";
 import * as earcons from "@/lib/audio/earcons";
 import * as voicebox from "@/lib/speech/voicebox";
 import * as synthesis from "@/lib/speech/synthesis";
@@ -480,6 +482,130 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     return false;
   }, [granularity, setGranularity, chunks, currentChunkIndex, speakInfoWithFeedback]);
 
+  // Helper: extract sections from slides
+  const getSectionsFromSlides = useCallback((slides: Slide[]) => {
+    const sections: { name: string; startIndex: number; slideCount: number }[] = [];
+    let current: { name: string; startIndex: number; slideCount: number } | null = null;
+
+    slides.forEach((slide, index) => {
+      const name = slide.sectionName || "Untitled";
+      if (!current || current.name !== name) {
+        if (current) sections.push(current);
+        current = { name, startIndex: index, slideCount: 1 };
+      } else {
+        current.slideCount++;
+      }
+    });
+    if (current) sections.push(current);
+
+    return sections;
+  }, []);
+
+  // Handle section navigation commands
+  const handleSectionCommand = useCallback((command: string, transcript: string): boolean => {
+    const slides = talk?.slides;
+    if (!slides || slides.length === 0) return false;
+
+    const sections = getSectionsFromSlides(slides);
+    const currentSectionName = slides[currentSlideIndex]?.sectionName;
+
+    switch (command) {
+      case "nextSection": {
+        // Find first slide in next section
+        const nextIndex = slides.findIndex((s, i) =>
+          i > currentSlideIndex && s.sectionName !== currentSectionName
+        );
+        if (nextIndex >= 0 && onGoToSlide) {
+          earcons.navigationJump();
+          speakInfoWithFeedback(slides[nextIndex].sectionName || "Next section");
+          onGoToSlide(nextIndex);
+          return true;
+        }
+        speakInfoWithFeedback("No more sections");
+        return true;
+      }
+      case "prevSection": {
+        // Find first slide in previous section
+        let prevSectionStart = -1;
+        let prevSectionName = "";
+
+        // Walk backwards to find start of current section
+        let currentSectionStart = currentSlideIndex;
+        while (currentSectionStart > 0 && slides[currentSectionStart - 1]?.sectionName === currentSectionName) {
+          currentSectionStart--;
+        }
+
+        // If we're not at start of current section, go there
+        if (currentSectionStart < currentSlideIndex) {
+          prevSectionStart = currentSectionStart;
+          prevSectionName = currentSectionName || "Current section";
+        } else {
+          // Find previous section
+          for (let i = currentSectionStart - 1; i >= 0; i--) {
+            if (slides[i].sectionName !== currentSectionName) {
+              prevSectionName = slides[i].sectionName || "Previous section";
+              // Find start of that section
+              prevSectionStart = i;
+              while (prevSectionStart > 0 && slides[prevSectionStart - 1]?.sectionName === slides[i].sectionName) {
+                prevSectionStart--;
+              }
+              break;
+            }
+          }
+        }
+
+        if (prevSectionStart >= 0 && onGoToSlide) {
+          earcons.navigationJump();
+          speakInfoWithFeedback(prevSectionName);
+          onGoToSlide(prevSectionStart);
+          return true;
+        }
+        speakInfoWithFeedback("No previous section");
+        return true;
+      }
+      case "goToSection": {
+        const target = parseGoToSectionCommand(transcript);
+        if (target === null) {
+          speakInfoWithFeedback("Which section?");
+          return true;
+        }
+
+        let targetSection: { name: string; startIndex: number } | undefined;
+
+        if (typeof target === "number") {
+          // Section by number (1-indexed)
+          targetSection = sections[target - 1];
+        } else {
+          // Section by name (case-insensitive partial match)
+          const targetLower = target.toLowerCase();
+          targetSection = sections.find(s => s.name.toLowerCase().includes(targetLower));
+        }
+
+        if (targetSection && onGoToSlide) {
+          earcons.navigationJump();
+          speakInfoWithFeedback(targetSection.name);
+          onGoToSlide(targetSection.startIndex);
+          return true;
+        }
+        speakInfoWithFeedback(`Section not found. You have ${sections.length} sections.`);
+        return true;
+      }
+      case "listSections": {
+        if (sections.length === 0) {
+          speakInfoWithFeedback("No sections in this talk");
+        } else if (sections.length === 1) {
+          speakInfoWithFeedback(`1 section: ${sections[0].name}`);
+        } else {
+          const names = sections.slice(0, 5).map(s => s.name).join(", ");
+          const more = sections.length > 5 ? `, and ${sections.length - 5} more` : "";
+          speakInfoWithFeedback(`${sections.length} sections: ${names}${more}`);
+        }
+        return true;
+      }
+    }
+    return false;
+  }, [talk, currentSlideIndex, onGoToSlide, getSectionsFromSlides, speakInfoWithFeedback]);
+
   // Handle base navigation commands
   const handleBaseCommand = useCallback((command: string): boolean => {
     switch (command) {
@@ -553,10 +679,11 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     if (handleRepeatVariationCommand(command)) return command;
     if (handlePracticeModeCommand(command)) return command;
     if (handleGranularityCommand(command)) return command;
+    if (handleSectionCommand(command, transcript)) return command;
     if (handleBaseCommand(command)) return command;
 
     return command;
-  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleGranularityCommand, handleBaseCommand]);
+  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleGranularityCommand, handleSectionCommand, handleBaseCommand]);
 
   /**
    * Check command without executing (for preview/logging)

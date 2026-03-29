@@ -194,19 +194,19 @@
 
 ## Deferred Items (Optional Polish)
 
-**UI Integration:**
-- [ ] ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
-- [ ] PromptMode: first-3-words cue for sentences, paragraph labels
-- [ ] TestMode: pure recall (sentence number only, no cue)
-- [ ] Progress bar reflects chunk count
-- [ ] Granularity selector in Settings page
+**UI Integration:** ✅ ALL COMPLETE (already implemented via useChunkNavigation)
+- [x] ListenMode: chunk-by-chunk auto-play with paragraph/sentence pauses
+- [x] PromptMode: first-3-words cue for sentences, paragraph labels
+- [x] TestMode: pure recall (sentence number only, no cue)
+- [x] Progress bar reflects chunk count
+- [x] Granularity selector in Settings page
 
-**Data Persistence:**
-- [ ] Persist bookmarks to IndexedDB per-talk
-- [ ] Auto-bookmark on score < 50
+**Data Persistence:** ✅ ALL COMPLETE
+- [x] Persist bookmarks to IndexedDB per-talk (db/bookmarks.ts)
+- [x] Auto-bookmark on score < 50 (rehearsalStore.ts:recordAttempt)
 
-**Additional Features:**
-- [ ] Section navigation commands (nextSection, prevSection, goToSection)
+**Additional Features:** ✅ SECTION NAV COMPLETE
+- [x] Section navigation commands (nextSection, prevSection, goToSection, listSections)
 - [ ] Session timer display
 
 **Testing & Verification:**

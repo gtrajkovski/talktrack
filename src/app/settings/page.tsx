@@ -273,6 +273,36 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* Practice Granularity */}
+        <Card>
+          <h3 className="font-bold mb-4">Practice Granularity</h3>
+          <p className="text-sm text-text-dim mb-4">
+            How to break down content during rehearsal
+          </p>
+          <div className="space-y-3">
+            {(["slide", "paragraph", "sentence"] as const).map((level) => (
+              <label key={level} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="granularity"
+                  value={level}
+                  checked={settings.defaultGranularity === level}
+                  onChange={() => settings.updateSettings({ defaultGranularity: level })}
+                  className="w-5 h-5 accent-accent"
+                />
+                <div>
+                  <div className="font-medium capitalize">{level}</div>
+                  <div className="text-sm text-text-dim">
+                    {level === "slide" && "Practice entire slides at once"}
+                    {level === "paragraph" && "Break slides into paragraphs"}
+                    {level === "sentence" && "Fine-grained sentence practice"}
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Card>
+
         {/* Reading Pace */}
         <Card>
           <h3 className="font-bold mb-4">Time Estimates</h3>
