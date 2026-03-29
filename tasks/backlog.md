@@ -16,21 +16,23 @@ The VoiceBox local API integration (localhost:17493) was originally planned as a
 - ✅ 18 new tests added
 
 ### Chunk-Level Enhancements
-**Status:** Partial
+**Status:** ✅ Complete
 
 - ✅ Bookmarking at chunk level (toggleChunkBookmark, isChunkBookmarked, etc.)
-- Pre-cache audio at sentence level (deferred)
+- ✅ Pre-cache audio at sentence level (precache.ts, usePrecache.ts)
 
 ---
 
 ## Manual Testing
 
-### User Journeys (8 total)
+### User Journeys (10 total)
 - [ ] New user onboarding
 - [ ] Prompt mode rehearsal
 - [ ] Test mode rehearsal
 - [ ] PPTX import flow
 - [ ] DOCX import flow
+- [ ] PDF import flow
+- [ ] URL import flow
 - [ ] Session resume
 - [ ] Settings changes
 - [ ] Stats review
