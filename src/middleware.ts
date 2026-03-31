@@ -6,16 +6,16 @@ import type { NextRequest } from 'next/server';
 const COOKIE_NAME = 'talktrack-beta-auth';
 
 export function middleware(request: NextRequest) {
-  // Skip if no password is configured (public mode)
-  const password = process.env.PASSFORT_PASSWORD;
-  if (!password) {
+  const pathname = request.nextUrl.pathname;
+
+  // Always allow login page and auth API
+  if (pathname === '/login' || pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  const pathname = request.nextUrl.pathname;
-
-  // Allow login page and API routes
-  if (pathname === '/login' || pathname === '/api/beta-auth') {
+  // Skip if no password is configured (public mode)
+  const password = process.env.PASSFORT_PASSWORD;
+  if (!password) {
     return NextResponse.next();
   }
 
@@ -33,18 +33,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all routes except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico
-     * - manifest.json (needed for PWA install)
-     * - icons/ (PWA icons)
-     * - sounds/ (earcon audio files)
-     * - sw.js (service worker)
-     * - workbox-*.js (service worker dependencies)
-     * - .well-known/ (digital asset links for TWA)
-     * - api/ routes except beta-auth (keep API accessible)
+     * Match all request paths except static files
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|icons/|sounds/|sw\\.js|workbox-.*\\.js|\\.well-known/|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|icons|sounds|sw.js|workbox).*)',
   ],
 };

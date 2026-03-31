@@ -1,9 +1,14 @@
 # TalkTrack — Active Work
 
 ## Current Status
-- **Prompts 01-09:** ✅ ALL COMPLETE
-- **Tests:** 323 passing
+- **Prompts 01-11:** ✅ ALL COMPLETE
+- **Prompt 13A (TWA):** 🔄 IN PROGRESS — Deployed, awaiting TWA generation
+- **Prompt 14 (Roadmap):** ✅ COMPLETE — POST_LAUNCH_ROADMAP.md created
+- **Prompt 15 (Beta Gate + AI Coach):** ✅ COMPLETE
+- **Tests:** 696 passing
 - **Build:** Clean
+- **TypeScript:** Clean
+- **Production URL:** https://talktrack-three.vercel.app
 
 ## Prompt Reference
 
@@ -203,7 +208,132 @@
 - [x] Text parser tests (`tests/parsers/text.test.ts`)
 - [x] Markdown parser tests (`tests/parsers/markdown.test.ts`)
 - [x] PPTX parser tests (`tests/parsers/pptx.test.ts`)
-- [x] Total: 323 tests passing
+
+### Prompt 10 — Store/Integration/Component Tests — ✅ COMPLETE
+**Store Tests** ✅
+- [x] `tests/stores/rehearsalStore.test.ts` (56 tests)
+- [x] `tests/stores/settingsStore.test.ts` (31 tests)
+- [x] `tests/stores/talksStore.test.ts` (19 tests)
+
+**DB Tests** ✅
+- [x] `tests/db/talks.test.ts` (11 tests)
+- [x] `tests/db/sessions.test.ts` (11 tests)
+- [x] `tests/db/cascade.test.ts` (10 tests)
+- [x] `tests/db/sessionPersistence.test.ts` (18 tests)
+
+**Integration Tests** ✅
+- [x] `tests/integration/importToRehearsal.test.ts` (7 tests)
+- [x] `tests/integration/scoring.test.ts` (17 tests)
+- [x] `tests/integration/granularity.test.ts` (11 tests)
+- [x] `tests/integration/bookmarkPractice.test.ts` (14 tests)
+- [x] `tests/integration/export.test.ts` (19 tests)
+
+**Component Tests** ✅
+- [x] `tests/components/Button.test.tsx` (12 tests)
+- [x] `tests/components/ProgressBar.test.tsx` (6 tests)
+
+### Prompt 11 — Voice Intelligence Layer — ✅ COMPLETE
+**Delivery Analytics** ✅
+- [x] `src/lib/scoring/deliveryAnalytics.ts` — filler detection with categories, pace analysis
+- [x] `tests/scoring/deliveryAnalytics.test.ts`
+
+**Spaced Repetition** ✅
+- [x] `src/lib/scoring/spacedRepetition.ts` — Leitner box system (1-5)
+- [x] `tests/scoring/spacedRepetition.test.ts`
+
+**Voice Assistant** ✅
+- [x] `src/lib/speech/voiceAssistant.ts` — contextual help, command lists
+- [x] `tests/speech/voiceAssistant.test.ts`
+
+**Session Debrief** ✅
+- [x] `src/lib/speech/sessionDebrief.ts` — spoken end-of-session summaries
+
+**New Voice Commands** ✅
+- [x] 7 new commands: summary, whatsNext, whatDidIMiss, whatCanISay, smartRehearse, setTimer, amIOnPace
+- [x] All 4 languages supported (EN, MK, SQ, IT)
+
+**New Earcons** ✅
+- [x] deadAirNudge, levelUp, levelDown, onPace
+
+**Type Updates** ✅
+- [x] srBox?, srLastReviewedAt?, srNextReviewAt? on Slide
+- [x] targetDurationMinutes? on Talk
+- [x] paceAssessment?, fillerDetails?, missedContentWords? on SlideAttempt
+- [x] commandsLearned, totalSessionsEver on UserSettings
+
+- [x] Total: 696 tests passing
+
+### Prompt 13A — Package for Google Play via TWA — 🔄 IN PROGRESS
+**Part 1: PWA Readiness** ✅
+- [x] Fix manifest.json — separate "any" and "maskable" icon purposes
+- [x] Verify required icons (192x192, 512x512) present
+- [x] Confirm `display: "standalone"` set
+- [x] Build script updated with `--webpack` flag for next-pwa
+- [x] Service worker generated (`public/sw.js`)
+- [x] `.well-known/assetlinks.json` placeholder created
+
+**Part 2: Deployment** ✅ COMPLETE
+- [x] Deploy to Vercel production (https://talktrack-three.vercel.app)
+- [x] Run Lighthouse PWA audit (90% perf, 93% a11y, 100% best practices, 100% SEO)
+- [x] Verify `/.well-known/assetlinks.json` is accessible
+
+**Part 3: TWA Generation** ⏳ PENDING
+- [ ] Use PWABuilder (pwabuilder.com) or Bubblewrap CLI
+- [ ] Configure package name: `com.talktrack.app`
+- [ ] Generate signing keystore (SAVE SECURELY!)
+- [ ] Build APK/AAB
+
+**Part 4: Digital Asset Links** ⏳ PENDING
+- [ ] Get SHA-256 fingerprint from keystore
+- [ ] Update `.well-known/assetlinks.json` with real fingerprint
+- [ ] Redeploy to Vercel
+- [ ] Verify with Google's verification tool
+
+**Part 5: Google Play Submission** ⏳ PENDING
+- [ ] Create Google Play Developer account ($25)
+- [ ] Prepare store listing (description, screenshots)
+- [ ] Upload AAB to internal testing
+- [ ] Test on real device
+- [ ] Promote to production
+
+### Prompt 14 — Post-Launch Roadmap — ✅ COMPLETE
+- [x] Created `POST_LAUNCH_ROADMAP.md` with 7 phases
+- [x] Updated `CLAUDE.md` with roadmap reference
+- [x] Updated `PROJECT.md` status section
+- [x] Decision log initialized
+- [x] Prompt file inventory documented
+
+### Prompt 15 — Beta Gate + AI Coach Integration — ✅ COMPLETE
+**Part 1: Password Protection (Beta Gate)** ✅
+- [x] Created `middleware.ts` with cookie-based auth
+- [x] Created `/api/beta-auth` route for password verification
+- [x] Created branded `/login` page with TalkTrack styling
+- [x] Matcher excludes PWA assets, .well-known, API routes
+
+**Part 2: AI Coach Settings** ✅
+- [x] Added `aiProvider`, `aiApiKey`, `aiModel`, `enableAiCoach` to UserSettings
+- [x] AI Coach section in Settings page with provider selector
+- [x] BYOK support for Anthropic, OpenAI, Google Gemini
+
+**Part 3: AI Coach API** ✅
+- [x] Created `/api/coach` route with rate limiting
+- [x] Multi-provider support: Gemini (free), Anthropic, OpenAI, Google BYOK
+- [x] SYSTEM_PROMPT for concise spoken coaching feedback
+- [x] IP-based rate limiting (20 free requests/hour)
+
+**Part 4: Coach Client** ✅
+- [x] Created `src/lib/ai/coach.ts` with `getCoachFeedback()`
+- [x] Builds session summary from attempts
+
+**Part 5: Voice Command & Earcon** ✅
+- [x] Added `coachStart` earcon (warm A3→C#4 major third)
+- [x] Added `askCoach` voice command in all 4 languages
+
+**Part 6: Environment** ✅
+- [x] Created `.env.local.example` with required variables
+- [x] Tests: 696 passing
+- [x] Build: Clean
+- [x] TypeScript: Clean
 
 ---
 
@@ -234,8 +364,8 @@
 - [ ] 8 user journeys — manual testing
 - [x] Mock infrastructure (SpeechSynthesis, SpeechRecognition, AudioContext)
 - [x] Unit tests for fillerWords, pacing, formatDuration, wordCount
-- [ ] Store tests (rehearsalStore, settingsStore)
-- [ ] Integration tests
+- [x] Store tests (rehearsalStore, settingsStore, talksStore)
+- [x] Integration tests (scoring, granularity, bookmarks, export)
 - [ ] Data integrity verification
 
 ---

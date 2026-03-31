@@ -6,6 +6,7 @@ export interface Talk {
   updatedAt: number;
   totalRehearsals: number;
   source: "paste" | "pptx" | "docx" | "pdf" | "url" | "voice" | "demo";
+  targetDurationMinutes?: number; // Target duration for pacing feedback
 }
 
 export interface ScoreEntry {
@@ -27,6 +28,10 @@ export interface Slide {
   scoreHistory?: ScoreEntry[];
   sectionId?: string;
   sectionName?: string;
+  // Spaced repetition fields (all optional, defaults handled in SR module)
+  srBox?: number;             // 1-5, Leitner box (default 1)
+  srLastReviewedAt?: number;  // Timestamp of last review
+  srNextReviewAt?: number;    // Timestamp when next review is due
 }
 
 export interface Section {

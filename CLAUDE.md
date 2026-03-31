@@ -6,6 +6,9 @@ TalkTrack is a mobile-first web app that lets people rehearse spoken content (pr
 
 No existing tool does this. PowerPoint Speaker Coach, Orai, Speeko, and Yoodli all require looking at a screen. TalkTrack is the first rehearsal tool designed for commuters.
 
+## Post-Launch Roadmap
+See `POST_LAUNCH_ROADMAP.md` for the sequenced plan of all features and improvements planned after v1.0 launch.
+
 ## Tech Stack
 
 - **Framework**: Next.js 14+ (App Router)

@@ -7,6 +7,8 @@
  */
 
 import * as synthesis from "./synthesis";
+import * as bargeIn from "./bargeIn";
+import type { CommandLanguage } from "../i18n/voiceCommands";
 
 // Re-export types from synthesis for convenience
 export type { SpeakOptions } from "./synthesis";
@@ -223,12 +225,16 @@ export function play(
     };
     onEnd?: () => void;
     onSentenceChange?: (index: number, sentence: string) => void;
+    /** Callback when user interrupts TTS with voice command (barge-in) */
+    onInterrupt?: (command: string) => void;
+    /** Language for voice command matching during barge-in */
+    commandLanguage?: CommandLanguage;
   } = {}
 ): void {
   // Stop any current playback
   stop();
 
-  const { rate = 0.95, voiceName, wordsPerMinute = DEFAULT_WPM, voiceBoxClone: vbcConfig, elevenLabs: elevenLabsConfig, onEnd, onSentenceChange } = options;
+  const { rate = 0.95, voiceName, wordsPerMinute = DEFAULT_WPM, voiceBoxClone: vbcConfig, elevenLabs: elevenLabsConfig, onEnd, onSentenceChange, onInterrupt, commandLanguage = "en" } = options;
 
   // Initialize state
   currentText = text;
@@ -251,6 +257,11 @@ export function play(
     onSentenceChange(0, sentences[0]);
   }
 
+  // Start barge-in recognition if supported and callback provided
+  if (onInterrupt && bargeIn.canBargeIn()) {
+    bargeIn.startBargeIn(text, commandLanguage, onInterrupt);
+  }
+
   // Use synthesis module to speak
   // Priority: VoiceBox Clone > ElevenLabs > Web Speech
   synthesis.speak(text, {
@@ -259,6 +270,8 @@ export function play(
     voiceBoxClone: vbcConfig,
     elevenLabs: elevenLabsConfig,
     onEnd: () => {
+      // Stop barge-in recognition
+      bargeIn.stopBargeIn();
       resetState();
       notifyState();
       notifyProgress();
@@ -330,6 +343,7 @@ function trackSentenceChanges(
  * Stop playback
  */
 export function stop(): void {
+  bargeIn.stopBargeIn();
   synthesis.stop();
   resetState();
   notifyState();

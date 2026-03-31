@@ -9,8 +9,8 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // Empty turbopack config to silence webpack/turbopack conflict warning
-  turbopack: {},
+  // Allow dev access from local network (phone testing)
+  allowedDevOrigins: ["http://172.18.224.1:3001"],
 };
 
 export default withPWA(nextConfig);

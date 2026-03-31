@@ -14,8 +14,9 @@ Mobile-first web app that lets people rehearse spoken content (presentations, sp
 - Hosted on Vercel
 
 ## Status
-- **Current Phase**: Prompts 01-10 complete
-- **Tests**: 611 passing
+- **Current Phase**: v1.0 final testing (web PWA + Android TWA)
+- **Post-launch roadmap**: See POST_LAUNCH_ROADMAP.md
+- **Tests**: 696 passing
 - **Build**: Clean
 - **TypeScript**: Clean
 
@@ -40,7 +41,7 @@ No existing tool (PowerPoint Speaker Coach, Orai, Speeko, Yoodli) works without 
 npm install          # Install dependencies
 npm run dev          # Development server
 npm run build        # Build for production
-npm test             # Run tests (611 passing)
+npm test             # Run tests (696 passing)
 npx tsc --noEmit     # Type check
 npm run lint         # Lint
 ```

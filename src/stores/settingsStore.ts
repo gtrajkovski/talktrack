@@ -4,6 +4,8 @@ import type { UserSettings } from "@/types/settings";
 import { DEFAULT_SETTINGS } from "@/types/settings";
 
 interface SettingsState extends UserSettings {
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   resetSettings: () => void;
 }
@@ -12,6 +14,11 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       ...DEFAULT_SETTINGS,
+      _hasHydrated: false,
+
+      setHasHydrated: (state: boolean) => {
+        set({ _hasHydrated: state });
+      },
 
       updateSettings: (newSettings: Partial<UserSettings>) => {
         set((state) => ({ ...state, ...newSettings }));
@@ -23,6 +30,9 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "talktrack-settings",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

@@ -13,6 +13,8 @@ export interface RehearsalSession {
   attempts: SlideAttempt[];
 }
 
+export type PaceAssessment = 'too_slow' | 'good' | 'slightly_fast' | 'too_fast';
+
 export interface SlideAttempt {
   slideId: string;
   slideIndex: number;
@@ -24,6 +26,10 @@ export interface SlideAttempt {
   usedHelp: boolean;
   // Chunk-level attempts (for sentence/paragraph modes)
   chunkAttempts?: ChunkAttempt[];
+  // Enhanced delivery analytics
+  paceAssessment?: PaceAssessment;
+  fillerDetails?: Record<string, number>; // e.g., { "um": 3, "like": 2 }
+  missedContentWords?: string[]; // Content words from original not in spoken
 }
 
 export interface ChunkAttempt {

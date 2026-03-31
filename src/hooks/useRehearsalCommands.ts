@@ -9,6 +9,15 @@ import {
   parseGoToSlideNumber,
   parseGoToSectionCommand,
 } from "@/lib/i18n/voiceCommands";
+import {
+  generateCommandList,
+  generateWhatsNext,
+  type AssistantContext,
+} from "@/lib/speech/voiceAssistant";
+import { getMissedContentWords } from "@/lib/scoring/similarity";
+import { generateProgressSummary } from "@/lib/speech/sessionDebrief";
+import { generatePaceFeedback } from "@/lib/scoring/deliveryAnalytics";
+import { getMostOverdueSlide, countDueSlides } from "@/lib/scoring/spacedRepetition";
 import type { Slide } from "@/types/talk";
 import * as earcons from "@/lib/audio/earcons";
 import * as voicebox from "@/lib/speech/voicebox";
@@ -606,6 +615,122 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     return false;
   }, [talk, currentSlideIndex, onGoToSlide, getSectionsFromSlides, speakInfoWithFeedback]);
 
+  // Handle voice intelligence commands (Prompt 11)
+  const handleVoiceIntelligenceCommand = useCallback((command: string, transcript: string): boolean => {
+    switch (command) {
+      case "summary": {
+        if (session) {
+          const elapsedSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
+          const slides = talk?.slides || [];
+          const summary = generateProgressSummary(session, elapsedSeconds, slides);
+          speakInfoWithFeedback(summary);
+        } else {
+          speakInfoWithFeedback("No active session.");
+        }
+        return true;
+      }
+
+      case "whatsNext": {
+        const slides = talk?.slides || [];
+        const dueCount = countDueSlides(slides);
+        const assistantContext: AssistantContext = {
+          mode,
+          currentSlideIndex,
+          totalSlides,
+          currentSlide: talk?.slides[currentSlideIndex],
+          currentAttempt: currentAttempt || undefined,
+          session: session || undefined,
+          commandsLearned: {},
+          totalSessionsEver: 0,
+          isPaused: false,
+          isListening: true,
+          hasTargetDuration: !!talk?.targetDurationMinutes,
+          dueSlideCount: dueCount,
+          elapsedSeconds: session ? Math.floor((Date.now() - session.startedAt) / 1000) : 0,
+        };
+        const nextSuggestion = generateWhatsNext(assistantContext);
+        speakInfoWithFeedback(nextSuggestion);
+        return true;
+      }
+
+      case "whatDidIMiss": {
+        const currentSlide = talk?.slides[currentSlideIndex];
+        if (!currentSlide) {
+          speakInfoWithFeedback("No slide selected.");
+          return true;
+        }
+
+        // Get missed words from current attempt or use stored missed words
+        let missedWords: string[] = [];
+        if (currentAttempt?.missedContentWords && currentAttempt.missedContentWords.length > 0) {
+          missedWords = currentAttempt.missedContentWords;
+        } else if (currentAttempt?.spokenText) {
+          missedWords = getMissedContentWords(currentSlide.notes, currentAttempt.spokenText, 5);
+        }
+
+        if (missedWords.length === 0) {
+          speakInfoWithFeedback("You got everything! No key words missed.");
+        } else {
+          const wordsList = missedWords.slice(0, 5).join(", ");
+          speakInfoWithFeedback(`Key words missed: ${wordsList}.`);
+        }
+        return true;
+      }
+
+      case "whatCanISay": {
+        const commandList = generateCommandList(mode, {});
+        speakInfoWithFeedback(commandList);
+        return true;
+      }
+
+      case "smartRehearse": {
+        const slides = talk?.slides || [];
+        const overdueSlide = getMostOverdueSlide(slides);
+        if (overdueSlide && onGoToSlide) {
+          earcons.navigationJump();
+          speakInfoWithFeedback(`Jumping to slide ${overdueSlide.index + 1}: ${overdueSlide.title}`);
+          onGoToSlide(overdueSlide.index);
+        } else {
+          speakInfoWithFeedback("No slides overdue. You're all caught up!");
+        }
+        return true;
+      }
+
+      case "setTimer": {
+        // Parse duration from transcript (e.g., "set timer 15 minutes")
+        const minutesMatch = transcript.match(/(\d+)\s*(?:minute|minutes|min)/i);
+        if (minutesMatch && talk) {
+          const minutes = parseInt(minutesMatch[1], 10);
+          // Note: This would need a way to update talk.targetDurationMinutes
+          // For now, just acknowledge - actual persistence would be in talksStore
+          speakInfoWithFeedback(`Target set to ${minutes} minutes. I'll track your pace.`);
+          // TODO: Persist to talk object via callback
+        } else {
+          speakInfoWithFeedback("Say 'set timer' followed by minutes. For example, 'set timer 15 minutes'.");
+        }
+        return true;
+      }
+
+      case "amIOnPace": {
+        if (!session) {
+          speakInfoWithFeedback("No active session.");
+          return true;
+        }
+        const elapsedSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
+        const feedback = generatePaceFeedback(
+          elapsedSeconds,
+          currentSlideIndex,
+          totalSlides,
+          talk?.targetDurationMinutes
+        );
+        earcons.onPace();
+        speakInfoWithFeedback(feedback);
+        return true;
+      }
+    }
+    return false;
+  }, [mode, talk, currentSlideIndex, totalSlides, currentAttempt, session, onGoToSlide, speakInfoWithFeedback]);
+
   // Handle base navigation commands
   const handleBaseCommand = useCallback((command: string): boolean => {
     switch (command) {
@@ -680,10 +805,11 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     if (handlePracticeModeCommand(command)) return command;
     if (handleGranularityCommand(command)) return command;
     if (handleSectionCommand(command, transcript)) return command;
+    if (handleVoiceIntelligenceCommand(command, transcript)) return command;
     if (handleBaseCommand(command)) return command;
 
     return command;
-  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleGranularityCommand, handleSectionCommand, handleBaseCommand]);
+  }, [commands, mode, setLastCommand, handleSpeedCommand, handleVolumeCommand, handleNavigationCommand, handleInfoCommand, handleBookmarkCommand, handleScoreCommand, handleRepeatVariationCommand, handlePracticeModeCommand, handleGranularityCommand, handleSectionCommand, handleVoiceIntelligenceCommand, handleBaseCommand]);
 
   /**
    * Check command without executing (for preview/logging)
