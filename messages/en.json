@@ -1,0 +1,78 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "error": "Error",
+    "success": "Success"
+  },
+  "nav": {
+    "home": "Home",
+    "import": "Import",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Your Talks",
+    "empty": "No talks yet. Import your first one!",
+    "importButton": "Import Talk",
+    "rehearsals": "{count, plural, =0 {Never practiced} =1 {1 rehearsal} other {# rehearsals}}",
+    "slides": "{count, plural, =1 {1 slide} other {# slides}}"
+  },
+  "import": {
+    "title": "Import Talk",
+    "paste": "Paste Text",
+    "upload": "Upload File",
+    "pasteHint": "Paste your presentation notes. Separate slides with blank lines.",
+    "titlePlaceholder": "Talk Title",
+    "preview": "Preview",
+    "importing": "Importing..."
+  },
+  "rehearsal": {
+    "listen": "Listen Mode",
+    "prompt": "Prompt Mode",
+    "test": "Test Mode",
+    "listenDesc": "Listen to your slides read aloud",
+    "promptDesc": "Hear the title, recite from memory",
+    "testDesc": "Pure recall - no hints",
+    "slideOf": "Slide {current} of {total}",
+    "yourTurn": "Your turn — listening...",
+    "playing": "Playing...",
+    "paused": "Paused",
+    "reveal": "Reveal Answer",
+    "needHelp": "Need Help",
+    "complete": "Rehearsal Complete!",
+    "score": "Score: {score}%",
+    "again": "Practice Again",
+    "exit": "Exit"
+  },
+  "settings": {
+    "title": "Settings",
+    "voice": "Voice",
+    "speechRate": "Speech Rate",
+    "autoAdvance": "Auto-advance slides",
+    "autoAdvanceDelay": "Delay (seconds)",
+    "wordsPerMinute": "Words per minute",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "language": "Language",
+    "earcons": "Sound effects",
+    "earconVolume": "Sound volume",
+    "microphone": "Microphone",
+    "speaker": "Speaker",
+    "testSpeaker": "Test",
+    "commandLanguage": "Voice command language"
+  },
+  "completion": {
+    "title": "Great job!",
+    "slidesCompleted": "{count, plural, =1 {1 slide} other {# slides}} completed",
+    "practiceAgain": "Practice Again",
+    "backToTalk": "Back to Talk",
+    "viewStats": "View Stats"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Hecho",
+    "error": "Error",
+    "success": "Éxito"
+  },
+  "nav": {
+    "home": "Inicio",
+    "import": "Importar",
+    "settings": "Ajustes"
+  },
+  "home": {
+    "title": "Tus Presentaciones",
+    "empty": "No hay presentaciones. ¡Importa la primera!",
+    "importButton": "Importar Presentación",
+    "rehearsals": "{count, plural, =0 {Sin practicar} =1 {1 ensayo} other {# ensayos}}",
+    "slides": "{count, plural, =1 {1 diapositiva} other {# diapositivas}}"
+  },
+  "import": {
+    "title": "Importar Presentación",
+    "paste": "Pegar Texto",
+    "upload": "Subir Archivo",
+    "pasteHint": "Pega tus notas. Separa diapositivas con líneas en blanco.",
+    "titlePlaceholder": "Título de la Presentación",
+    "preview": "Vista Previa",
+    "importing": "Importando..."
+  },
+  "rehearsal": {
+    "listen": "Modo Escuchar",
+    "prompt": "Modo Indicación",
+    "test": "Modo Prueba",
+    "listenDesc": "Escucha tus diapositivas en voz alta",
+    "promptDesc": "Escucha el título, recita de memoria",
+    "testDesc": "Recuerdo puro - sin pistas",
+    "slideOf": "Diapositiva {current} de {total}",
+    "yourTurn": "Tu turno — escuchando...",
+    "playing": "Reproduciendo...",
+    "paused": "Pausado",
+    "reveal": "Mostrar Respuesta",
+    "needHelp": "Necesito Ayuda",
+    "complete": "¡Ensayo Completado!",
+    "score": "Puntuación: {score}%",
+    "again": "Practicar Otra Vez",
+    "exit": "Salir"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "voice": "Voz",
+    "speechRate": "Velocidad de Voz",
+    "autoAdvance": "Avanzar automáticamente",
+    "autoAdvanceDelay": "Retraso (segundos)",
+    "wordsPerMinute": "Palabras por minuto",
+    "theme": "Tema",
+    "dark": "Oscuro",
+    "light": "Claro",
+    "language": "Idioma",
+    "earcons": "Efectos de sonido",
+    "earconVolume": "Volumen de sonidos",
+    "microphone": "Micrófono",
+    "speaker": "Altavoz",
+    "testSpeaker": "Probar",
+    "commandLanguage": "Idioma de comandos de voz"
+  },
+  "completion": {
+    "title": "¡Buen trabajo!",
+    "slidesCompleted": "{count, plural, =1 {1 diapositiva} other {# diapositivas}} completadas",
+    "practiceAgain": "Practicar Otra Vez",
+    "backToTalk": "Volver a Presentación",
+    "viewStats": "Ver Estadísticas"
+  }
+}
