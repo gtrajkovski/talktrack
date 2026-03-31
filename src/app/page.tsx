@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -19,9 +20,11 @@ import type { Talk } from "@/types/talk";
 
 export default function HomePage() {
   const router = useRouter();
+  const t = useTranslations("home");
+  const tc = useTranslations("common");
   const { talks, isLoading, loadTalks, getTalk, addTalk } = useTalksStore();
   const { resumeSession } = useRehearsalStore();
-  const { hasSeenOnboarding, hasSelectedVoice, updateSettings, wordsPerMinute } = useSettingsStore();
+  const { hasSeenOnboarding, hasSelectedVoice, updateSettings, wordsPerMinute, _hasHydrated } = useSettingsStore();
 
   const [incompleteSession, setIncompleteSession] =
     useState<RehearsalSession | null>(null);
@@ -35,8 +38,9 @@ export default function HomePage() {
   }, [loadTalks]);
 
   // Derive modal visibility from state (no cascading effects)
-  const showOnboarding = !isLoading && !hasSeenOnboarding && !onboardingDismissed;
-  const showVoicePicker = !isLoading && hasSeenOnboarding && !hasSelectedVoice && !showOnboarding && !voicePickerDismissed;
+  // Wait for settings to hydrate from localStorage before showing modals
+  const showOnboarding = _hasHydrated && !isLoading && !hasSeenOnboarding && !onboardingDismissed;
+  const showVoicePicker = _hasHydrated && !isLoading && hasSeenOnboarding && !hasSelectedVoice && !showOnboarding && !voicePickerDismissed;
 
   const handleCloseOnboarding = useCallback(() => {
     setOnboardingDismissed(true);
@@ -109,16 +113,16 @@ export default function HomePage() {
         )}
 
         {isLoading ? (
-          <div className="text-center py-12 text-text-dim">Loading...</div>
+          <div className="text-center py-12 text-text-dim">{tc("loading")}</div>
         ) : talks.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-5xl mb-4">No talks yet</div>
+            <div className="text-5xl mb-4">{t("empty")}</div>
             <p className="text-text-dim mb-6">
               Import your first presentation to start rehearsing.
             </p>
             <div className="space-y-3">
               <Link href="/import">
-                <Button>Import Talk</Button>
+                <Button>{t("importButton")}</Button>
               </Link>
               <Button onClick={handleTryDemo} variant="secondary">
                 Try Demo Talk
@@ -128,7 +132,7 @@ export default function HomePage() {
         ) : (
           <>
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Your Talks</h2>
+              <h2 className="text-lg font-bold">{t("title")}</h2>
               <Link href="/import">
                 <Button fullWidth={false} className="px-4">
                   + New
@@ -146,13 +150,12 @@ export default function HomePage() {
                           {talk.title}
                         </h3>
                         <div className="text-sm text-text-dim mt-1">
-                          {talk.slides.length} slide
-                          {talk.slides.length !== 1 ? "s" : ""} &middot;{" "}
+                          {t("slides", { count: talk.slides.length })} &middot;{" "}
                           {formatDuration(getTotalTime(talk.slides))}
                         </div>
                       </div>
                       <div className="text-right text-sm text-text-dim ml-4">
-                        <div>{talk.totalRehearsals} rehearsals</div>
+                        <div>{t("rehearsals", { count: talk.totalRehearsals })}</div>
                       </div>
                     </div>
                   </Card>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
+import { IntlProvider } from "@/components/providers/IntlProvider";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -41,7 +42,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
       </head>
       <body className="min-h-dvh flex flex-col bg-bg text-text">
-        {children}
+        <IntlProvider>{children}</IntlProvider>
       </body>
     </html>
   );

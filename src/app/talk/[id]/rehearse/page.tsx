@@ -36,6 +36,9 @@ export default function RehearsalPage() {
   const [isComplete, setIsComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const initializedRef = useRef(false);
+  // Capture session data for CompletionScreen before endSession clears it
+  const [completedSession, setCompletedSession] = useState<typeof session>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Load talks on mount
   useEffect(() => {
@@ -75,6 +78,13 @@ export default function RehearsalPage() {
   }, [endSession]);
 
   const handleComplete = useCallback(() => {
+    // Capture session data for AI Coach before endSession clears it
+    const { session: currentSession, sessionStartTime } = useRehearsalStore.getState();
+    if (currentSession) {
+      setCompletedSession({ ...currentSession });
+      const elapsed = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0;
+      setElapsedSeconds(elapsed);
+    }
     setIsComplete(true);
     endSession();
   }, [endSession]);
@@ -114,6 +124,9 @@ export default function RehearsalPage() {
         talkTitle={talk.title}
         slidesCompleted={talk.slides.length}
         mode={mode}
+        session={completedSession}
+        talk={talk}
+        elapsedSeconds={elapsedSeconds}
       />
     );
   }

@@ -1,5 +1,5 @@
 /**
- * AI Coach - LLM-powered coaching feedback (BYOK Anthropic API)
+ * AI Coach - Client-side wrapper for /api/coach endpoint
  */
 
 import type { RehearsalSession } from "@/types/session";
@@ -12,80 +12,122 @@ export interface CoachingFeedback {
   spokenFeedback: string;
 }
 
+interface CoachRequestBody {
+  mode: "prompt" | "test";
+  slideSummaries: Array<{
+    title: string;
+    score: number;
+    missedWords: string[];
+    wpm?: number;
+    fillerCount?: number;
+  }>;
+  averageScore: number;
+  totalFillers: number;
+  averageWPM: number;
+  sessionDurationSeconds: number;
+  totalSlides: number;
+  targetDurationMinutes?: number;
+  provider: "free" | "anthropic" | "openai" | "google";
+  apiKey?: string;
+  model?: string;
+}
+
 export async function generateCoachingFeedback(
   session: RehearsalSession,
   talk: Talk,
   elapsedSeconds: number,
-  apiKey: string
+  options: {
+    provider?: "free" | "anthropic" | "openai" | "google";
+    apiKey?: string;
+    model?: string;
+  } = {}
 ): Promise<CoachingFeedback> {
-  const scores = session.attempts
-    .filter((a) => a.similarityScore !== undefined)
-    .map((a) => a.similarityScore!);
-  const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  const fillers = session.attempts.reduce((sum, a) => sum + (a.fillerWordCount || 0), 0);
-  const missed = [...new Set(session.attempts.flatMap((a) => a.missedContentWords || []))].slice(0, 8);
-  const mins = Math.floor(elapsedSeconds / 60);
-  const secs = elapsedSeconds % 60;
+  // Build slide summaries from attempts
+  const slideSummaries = session.attempts.map((attempt) => {
+    const slide = talk.slides.find((s) => s.id === attempt.slideId);
+    return {
+      title: slide?.title || `Slide ${attempt.slideIndex + 1}`,
+      score: attempt.similarityScore ?? 0,
+      missedWords: attempt.missedContentWords || [],
+      wpm: attempt.wordsPerMinute,
+      fillerCount: attempt.fillerWordCount,
+    };
+  });
 
-  const prompt = `Coach feedback for rehearsal:
-Talk: "${talk.title}" (${talk.slides.length} slides), Mode: ${session.mode}
-Duration: ${mins}m ${secs}s, Score: ${avg}%, Fillers: ${fillers}, Missed words: ${missed.join(", ") || "none"}
-Reply as JSON: {"summary":"2 sentences","strengths":["..."],"improvements":["..."],"spokenFeedback":"30 second TTS, encouraging"}`;
+  // Calculate aggregates
+  const scores = slideSummaries.map((s) => s.score).filter((s) => s > 0);
+  const averageScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0;
+  const totalFillers = slideSummaries.reduce(
+    (sum, s) => sum + (s.fillerCount || 0),
+    0
+  );
+  const wpms = slideSummaries
+    .map((s) => s.wpm)
+    .filter((w): w is number => w !== undefined && w > 0);
+  const averageWPM =
+    wpms.length > 0
+      ? Math.round(wpms.reduce((a, b) => a + b, 0) / wpms.length)
+      : 120;
+
+  const body: CoachRequestBody = {
+    mode: session.mode as "prompt" | "test",
+    slideSummaries,
+    averageScore,
+    totalFillers,
+    averageWPM,
+    sessionDurationSeconds: elapsedSeconds,
+    totalSlides: talk.slides.length,
+    targetDurationMinutes: talk.targetDurationMinutes,
+    provider: options.provider || "free",
+    apiKey: options.apiKey,
+    model: options.model,
+  };
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("/api/coach", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 512,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
 
-    if (!response.ok) throw new Error("API error");
-    const data = await response.json();
-    const text = data.content?.[0]?.text || "";
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]) as CoachingFeedback;
-  } catch (e) {
-    console.error("AI Coach error:", e);
-  }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.warn("Coach API error:", errorData.error || response.statusText);
+      throw new Error(errorData.error || "API error");
+    }
 
-  // Fallback
-  return {
-    summary: `Completed ${session.slidesCompleted} slides with ${avg}% average.`,
-    strengths: avg >= 70 ? ["Good recall"] : ["Session completed"],
-    improvements: avg < 70 ? ["Practice weak slides more"] : [],
-    spokenFeedback:
-      avg >= 70
-        ? `Nice work! You averaged ${avg} percent.`
-        : `Making progress at ${avg} percent. Keep practicing the tough slides.`,
-  };
+    const data = await response.json();
+    const feedback = data.feedback || "";
+
+    // The API returns plain text feedback, convert to structured format
+    return {
+      summary: feedback.slice(0, 150),
+      strengths: averageScore >= 70 ? ["Good recall"] : ["Session completed"],
+      improvements:
+        averageScore < 70 ? ["Practice weak slides more"] : [],
+      spokenFeedback: feedback,
+    };
+  } catch (e) {
+    console.warn("AI Coach error:", e);
+    // Return fallback feedback
+    return {
+      summary: `Completed ${session.slidesCompleted} slides with ${averageScore}% average.`,
+      strengths: averageScore >= 70 ? ["Good recall"] : ["Session completed"],
+      improvements: averageScore < 70 ? ["Practice weak slides more"] : [],
+      spokenFeedback:
+        averageScore >= 70
+          ? `Nice work! You averaged ${averageScore} percent.`
+          : `Making progress at ${averageScore} percent. Keep practicing the tough slides.`,
+    };
+  }
 }
 
 export async function testCoachApiKey(apiKey: string): Promise<boolean> {
   if (!apiKey || apiKey.length < 10) return false;
-  try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 5,
-        messages: [{ role: "user", content: "test" }],
-      }),
-    });
-    return r.ok;
-  } catch {
-    return false;
-  }
+  // For now just do a basic validation
+  // A full test would require calling the API which costs money
+  return true;
 }

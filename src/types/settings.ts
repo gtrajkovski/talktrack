@@ -1,7 +1,10 @@
 import type { CommandLanguage } from "@/lib/i18n/voiceCommands";
 import type { Granularity } from "@/lib/utils/chunker";
+import type { Locale } from "@/i18n/config";
 
 export interface UserSettings {
+  // UI Language (i18n)
+  uiLanguage: Locale;
   voiceName: string;
   speechRate: number;
   autoAdvance: boolean;
@@ -39,9 +42,15 @@ export interface UserSettings {
   aiApiKey: string | null;        // BYOK key (null = use free tier)
   aiModel: string | null;         // Custom model override (null = use default)
   enableAiCoach: boolean;         // Master toggle (default: true)
+  // Audio device settings (Phase 1B)
+  preferredMicLabel: string;      // Device label (not ID - IDs rotate for privacy)
+  preferredMicGroupId: string;    // For fuzzy matching
+  preferredSpeakerLabel: string;
+  preferredSpeakerGroupId: string;
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
+  uiLanguage: "en",
   voiceName: "",
   speechRate: 0.95,
   autoAdvance: true,
@@ -79,4 +88,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   aiApiKey: null,
   aiModel: null,
   enableAiCoach: true,
+  // Audio device defaults
+  preferredMicLabel: '',
+  preferredMicGroupId: '',
+  preferredSpeakerLabel: '',
+  preferredSpeakerGroupId: '',
 };

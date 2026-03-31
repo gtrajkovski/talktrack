@@ -3,10 +3,11 @@
 import { AppShell, Header } from "@/components/layout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { VoiceSelector, VoiceBoxCloneSettings } from "@/components/settings";
+import { VoiceSelector, VoiceBoxCloneSettings, AudioDeviceSelector } from "@/components/settings";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { LANGUAGE_LABELS, type CommandLanguage } from "@/lib/i18n/voiceCommands";
 import { resetHints } from "@/lib/commandHints";
+import { locales, localeNames, type Locale } from "@/i18n/config";
 
 export default function SettingsPage() {
   const settings = useSettingsStore();
@@ -24,6 +25,33 @@ export default function SettingsPage() {
         {/* Local TTS Server */}
         <Card>
           <VoiceBoxCloneSettings />
+        </Card>
+
+        {/* Audio Devices */}
+        <Card>
+          <AudioDeviceSelector />
+        </Card>
+
+        {/* UI Language */}
+        <Card>
+          <h3 className="font-bold mb-4">Language</h3>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-text-dim">App Language</span>
+            <select
+              value={settings.uiLanguage}
+              onChange={(e) => settings.updateSettings({ uiLanguage: e.target.value as Locale })}
+              className="bg-surface-light text-text rounded-lg px-3 py-2 text-sm min-w-[120px]"
+            >
+              {locales.map((locale) => (
+                <option key={locale} value={locale}>
+                  {localeNames[locale]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-text-dim mt-2">
+            Changes the app interface language. Voice command language is separate.
+          </p>
         </Card>
 
         {/* Speech Rate */}

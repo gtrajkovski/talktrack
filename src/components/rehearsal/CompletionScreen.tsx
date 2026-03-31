@@ -9,6 +9,9 @@ import { speak, stop, isSpeaking } from "@/lib/speech/synthesis";
 import { updateStreak } from "@/lib/db/streaks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { generateCoachingFeedback, type CoachingFeedback } from "@/lib/ai/coach";
+import type { RehearsalSession } from "@/types/session";
+import type { Talk } from "@/types/talk";
 
 const COMPLETION_MESSAGES = [
   "Great work! You're getting better with each run.",
@@ -24,6 +27,9 @@ interface CompletionScreenProps {
   talkTitle: string;
   slidesCompleted: number;
   mode: string;
+  session?: RehearsalSession | null;
+  talk?: Talk | null;
+  elapsedSeconds?: number;
 }
 
 export function CompletionScreen({
@@ -31,14 +37,19 @@ export function CompletionScreen({
   talkTitle,
   slidesCompleted,
   mode,
+  session,
+  talk,
+  elapsedSeconds = 0,
 }: CompletionScreenProps) {
   const router = useRouter();
-  const { commandLanguage } = useSettingsStore();
+  const { commandLanguage, enableAiCoach, aiApiKey, aiProvider } = useSettingsStore();
   const commands = getCommands(commandLanguage);
   const recognitionLocale = getRecognitionLocale(commandLanguage);
 
   const [streak, setStreak] = useState(0);
   const [isListening, setIsListening] = useState(false);
+  const [coachFeedback, setCoachFeedback] = useState<CoachingFeedback | null>(null);
+  const [isLoadingCoach, setIsLoadingCoach] = useState(false);
 
   // Recognition refs
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -210,6 +221,59 @@ export function CompletionScreen({
     };
   }, []);
 
+  // Fetch AI Coach feedback if enabled
+  useEffect(() => {
+    if (!enableAiCoach || !session || !talk) return;
+    // Only for prompt/test modes (not listen mode which has no attempts)
+    if (mode === "listen") return;
+
+    // For BYOK providers, require an API key
+    if (aiProvider !== "free" && !aiApiKey) return;
+
+    setIsLoadingCoach(true);
+    generateCoachingFeedback(session, talk, elapsedSeconds, {
+      provider: aiProvider,
+      apiKey: aiApiKey || undefined,
+    })
+      .then((feedback) => {
+        if (isMountedRef.current) {
+          setCoachFeedback(feedback);
+        }
+      })
+      .catch((err) => {
+        console.warn("AI Coach error:", err);
+      })
+      .finally(() => {
+        if (isMountedRef.current) {
+          setIsLoadingCoach(false);
+        }
+      });
+  }, [enableAiCoach, session, talk, elapsedSeconds, aiApiKey, aiProvider, mode]);
+
+  // Speak AI Coach feedback when it arrives (after initial TTS)
+  const coachSpokenRef = useRef(false);
+  useEffect(() => {
+    if (!coachFeedback?.spokenFeedback || coachSpokenRef.current) return;
+    coachSpokenRef.current = true;
+
+    // Wait a bit for any current TTS to finish, then speak coach feedback
+    const timer = setTimeout(() => {
+      if (isMountedRef.current && !isSpeaking()) {
+        earcons.coachStart?.();
+        speak(coachFeedback.spokenFeedback, {
+          rate: 0.95,
+          onEnd: () => {
+            if (isMountedRef.current) {
+              startListeningRef.current();
+            }
+          },
+        });
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [coachFeedback]);
+
   // Initial setup: earcon, streak, TTS, then start listening
   useEffect(() => {
     // Play completion earcon
@@ -273,6 +337,34 @@ export function CompletionScreen({
           </div>
         )}
       </Card>
+
+      {/* AI Coach Feedback */}
+      {isLoadingCoach && (
+        <Card className="w-full max-w-sm mb-4">
+          <div className="text-center text-text-dim text-sm">
+            <div className="animate-pulse">Getting AI coaching feedback...</div>
+          </div>
+        </Card>
+      )}
+      {coachFeedback && (
+        <Card className="w-full max-w-sm mb-4">
+          <div className="text-sm">
+            <p className="text-text mb-3">{coachFeedback.summary}</p>
+            {coachFeedback.strengths.length > 0 && (
+              <div className="mb-2">
+                <span className="text-success font-medium">Strengths: </span>
+                <span className="text-text-dim">{coachFeedback.strengths.join(", ")}</span>
+              </div>
+            )}
+            {coachFeedback.improvements.length > 0 && (
+              <div>
+                <span className="text-accent font-medium">Work on: </span>
+                <span className="text-text-dim">{coachFeedback.improvements.join(", ")}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Voice status indicator */}
       {isListening && (
