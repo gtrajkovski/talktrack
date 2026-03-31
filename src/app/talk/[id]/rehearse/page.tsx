@@ -14,6 +14,7 @@ import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { sessionStart } from "@/lib/audio/chime";
 import { filterSlidesBySection } from "@/lib/utils/sections";
 import { clearSessionHints } from "@/lib/commandHints";
+import { useMediaSession } from "@/hooks/useMediaSession";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {
@@ -78,10 +79,25 @@ export default function RehearsalPage() {
     endSession();
   }, [endSession]);
 
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     endSession();
     router.push(`/talk/${params.id}`);
-  };
+  }, [endSession, router, params.id]);
+
+  // MediaSession integration for car dashboards (CarPlay/Android Auto)
+  // Note: actual play/pause/next/prev are handled by mode components via voice commands
+  // These handlers provide fallback for hardware media buttons
+  const mediaSessionIsPlaying = useRehearsalStore((s) => s.audioState === "speaking");
+  useMediaSession({
+    talk: talk ? { ...talk, slides: filteredSlides } : null,
+    currentIndex: currentSlideIndex,
+    mode,
+    isPlaying: mediaSessionIsPlaying,
+    onNext: nextSlide,
+    onPrev: prevSlide,
+    onTogglePause: () => {}, // Handled by voice commands in mode components
+    onStop: handleExit,
+  });
 
   if (isLoading || !talk) {
     return (
