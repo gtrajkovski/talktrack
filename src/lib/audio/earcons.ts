@@ -394,6 +394,77 @@ export function modeChange(): void {
   setTimeout(() => playTone(880, 0.1, 'triangle', 0.4), 70);
 }
 
+/**
+ * Dead air nudge - gentle double-tap to prompt user during silence
+ * A3 (220Hz), quiet, two quick taps
+ */
+export function deadAirNudge(): void {
+  if (!shouldPlay()) return;
+  playTone(220, 0.06, 'sine', 0.15);
+  setTimeout(() => playTone(220, 0.06, 'sine', 0.15), 100);
+}
+
+/**
+ * Level up - ascending C-E-G arpeggio for SR box promotion
+ * Celebratory feel when mastering a slide
+ */
+export function levelUp(): void {
+  if (!shouldPlay()) return;
+  playTone(523, 0.1, 'triangle', 0.4);   // C5
+  setTimeout(() => playTone(659, 0.1, 'triangle', 0.4), 80);   // E5
+  setTimeout(() => playTone(784, 0.15, 'triangle', 0.5), 160); // G5
+}
+
+/**
+ * Level down - descending G-C for SR box demotion
+ * Gentle indication to keep practicing
+ */
+export function levelDown(): void {
+  if (!shouldPlay()) return;
+  playTone(392, 0.1, 'sine', 0.3);  // G4
+  setTimeout(() => playTone(262, 0.12, 'sine', 0.3), 100); // C4
+}
+
+/**
+ * On pace - single soft tone for timing checkpoint
+ * B4 (494Hz), very gentle
+ */
+export function onPace(): void {
+  if (!shouldPlay()) return;
+  playTone(494, 0.15, 'sine', 0.2);
+}
+
+/**
+ * Coach start - warm, friendly tone that says "here's your coach"
+ * Two ascending notes with a soft attack — distinct from level-up (which is a celebration)
+ * A3 → C#4 (warm major third)
+ */
+export function coachStart(): void {
+  if (!shouldPlay()) return;
+  try {
+    const ctx = getContext();
+    const now = ctx.currentTime;
+
+    // Warm major third: A3 → C#4
+    [220, 277.2].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle'; // Softer than sine
+      osc.frequency.value = freq;
+      const offset = i * 0.15;
+      gain.gain.setValueAtTime(0, now + offset);
+      gain.gain.linearRampToValueAtTime(0.1 * globalVolume, now + offset + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.35);
+    });
+  } catch (e) {
+    console.warn('Earcon playback failed:', e);
+  }
+}
+
 // ============================================================================
 // CONVENIENCE EXPORT
 // ============================================================================
@@ -426,6 +497,11 @@ export const earcons = {
   paragraphBreak,
   sentenceAdvance,
   modeChange,
+  deadAirNudge,
+  levelUp,
+  levelDown,
+  onPace,
+  coachStart,
 };
 
 export default earcons;

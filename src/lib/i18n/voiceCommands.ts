@@ -51,6 +51,16 @@ export interface VoiceCommandSet {
   prevSection: string[];
   goToSection: string[];  // Patterns like "go to section", "section named"
   listSections: string[];
+  // Voice intelligence commands (Prompt 11)
+  summary: string[];         // Session progress summary
+  whatsNext: string[];       // Smart suggestion for what to do
+  whatDidIMiss: string[];    // Top missed content words
+  whatCanISay: string[];     // Mode-specific command list
+  smartRehearse: string[];   // Jump to most overdue SR slide
+  setTimer: string[];        // Set target duration
+  amIOnPace: string[];       // Check timing vs target
+  // AI Coach command
+  askCoach: string[];        // Request AI coaching feedback
 }
 
 export const LANGUAGE_LABELS: Record<CommandLanguage, string> = {
@@ -121,6 +131,15 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     prevSection: ["previous section", "last section", "go back section"],
     goToSection: ["go to section", "section named", "jump to section"],
     listSections: ["list sections", "show sections", "what sections"],
+    // Voice intelligence commands
+    summary: ["summary", "session summary", "how am i doing", "progress"],
+    whatsNext: ["what's next", "whats next", "what next", "what should i do"],
+    whatDidIMiss: ["what did i miss", "missed words", "what was missing"],
+    whatCanISay: ["what can i say", "commands", "available commands", "voice commands"],
+    smartRehearse: ["smart rehearse", "smart practice", "practice weak slides", "review due"],
+    setTimer: ["set timer", "set time", "target time", "set target"],
+    amIOnPace: ["am i on pace", "pace check", "timing", "how's my timing"],
+    askCoach: ["coach me", "give me feedback", "what does the coach say", "coaching", "ai feedback", "coach"],
   },
 
   // Macedonian (Македонски)
@@ -175,6 +194,15 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     prevSection: ["претходна секција", "претходен дел"],
     goToSection: ["оди на секција", "секција со име"],
     listSections: ["листа секции", "покажи секции", "кои секции"],
+    // Voice intelligence commands
+    summary: ["резиме", "како одам", "напредок", "прогрес"],
+    whatsNext: ["што следи", "што да правам", "следно"],
+    whatDidIMiss: ["што пропуштив", "пропуштени зборови"],
+    whatCanISay: ["што можам да кажам", "команди", "гласовни команди"],
+    smartRehearse: ["паметна вежба", "вежбај тешки", "преглед"],
+    setTimer: ["постави време", "целно време", "постави цел"],
+    amIOnPace: ["дали сум на време", "темпо", "проверка на темпо"],
+    askCoach: ["тренирај ме", "дај фидбек", "што вели тренерот", "тренер"],
   },
 
   // Albanian (Shqip) - Kosovo/Albania
@@ -229,6 +257,15 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     prevSection: ["seksioni i mëparshëm", "pjesa e mëparshme"],
     goToSection: ["shko te seksioni", "seksioni me emër"],
     listSections: ["lista e seksioneve", "trego seksionet", "cilat seksione"],
+    // Voice intelligence commands
+    summary: ["përmbledhje", "si po shkoj", "progresi"],
+    whatsNext: ["çfarë është më pas", "çfarë tjetër", "çfarë të bëj"],
+    whatDidIMiss: ["çfarë më mungon", "fjalët e humbura"],
+    whatCanISay: ["çfarë mund të them", "komandat", "komandat e zërit"],
+    smartRehearse: ["praktikë e zgjuar", "praktiko të vështirat", "rishiko"],
+    setTimer: ["vendos kohën", "koha e synuar", "vendos cakun"],
+    amIOnPace: ["jam në ritëm", "kontrolli i ritmit", "koha ime"],
+    askCoach: ["trajno mua", "jepmu feedback", "çfarë thotë trajneri", "trajner"],
   },
 
   // Italian (Italiano)
@@ -283,6 +320,15 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     prevSection: ["sezione precedente", "sezione prima"],
     goToSection: ["vai alla sezione", "sezione chiamata"],
     listSections: ["lista sezioni", "mostra sezioni", "quali sezioni"],
+    // Voice intelligence commands
+    summary: ["riepilogo", "come sto andando", "progresso"],
+    whatsNext: ["cosa viene dopo", "prossimo passo", "cosa devo fare"],
+    whatDidIMiss: ["cosa ho perso", "parole mancanti", "cosa mancava"],
+    whatCanISay: ["cosa posso dire", "comandi", "comandi vocali"],
+    smartRehearse: ["pratica intelligente", "pratica le difficili", "ripassa"],
+    setTimer: ["imposta tempo", "tempo obiettivo", "imposta obiettivo"],
+    amIOnPace: ["sono in tempo", "controllo ritmo", "come va il tempo"],
+    askCoach: ["consigliami", "dammi feedback", "cosa dice il coach", "coaching", "coach"],
   },
 };
 
@@ -322,6 +368,11 @@ const PLAYBACK_COMMANDS: (keyof VoiceCommandSet)[] = [
   "hardOnly", "allSlides",
   // Granularity modes
   "sentenceMode", "paragraphMode", "slideMode", "whatMode",
+  // Voice intelligence
+  "summary", "whatsNext", "whatDidIMiss", "whatCanISay",
+  "smartRehearse", "setTimer", "amIOnPace",
+  // AI Coach
+  "askCoach",
 ];
 
 /**

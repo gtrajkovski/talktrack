@@ -303,6 +303,106 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* AI Coach */}
+        <Card>
+          <h3 className="font-bold mb-4">AI Coach</h3>
+          <p className="text-sm text-text-dim mb-4">
+            Get spoken coaching feedback after each session. Free by default — or bring your own API key for premium models.
+          </p>
+
+          <div className="space-y-4">
+            {/* Master toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Enable AI Coaching</div>
+                <div className="text-sm text-text-dim">
+                  Feedback after Prompt/Test sessions
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ enableAiCoach: !settings.enableAiCoach })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.enableAiCoach ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableAiCoach ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {settings.enableAiCoach && (
+              <>
+                {/* Provider selector */}
+                <div>
+                  <label className="block text-sm text-text-dim mb-1">AI Provider</label>
+                  <select
+                    value={settings.aiProvider}
+                    onChange={(e) => settings.updateSettings({ aiProvider: e.target.value as 'free' | 'anthropic' | 'openai' | 'google' })}
+                    className="w-full bg-surface-light text-text border border-surface-light rounded-xl px-4 py-3"
+                  >
+                    <option value="free">Free (Gemini Flash — no key needed)</option>
+                    <option value="google">Google Gemini (your own key)</option>
+                    <option value="anthropic">Anthropic Claude (your own key)</option>
+                    <option value="openai">OpenAI GPT (your own key)</option>
+                  </select>
+                </div>
+
+                {/* API key input — only show for BYOK providers */}
+                {settings.aiProvider !== 'free' && (
+                  <div>
+                    <label className="block text-sm text-text-dim mb-1">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={settings.aiApiKey ?? ''}
+                      onChange={(e) => settings.updateSettings({ aiApiKey: e.target.value || null })}
+                      placeholder={
+                        settings.aiProvider === 'anthropic' ? 'sk-ant-...' :
+                        settings.aiProvider === 'openai' ? 'sk-...' :
+                        'AIza...'
+                      }
+                      className="w-full bg-surface-light text-text border border-surface-light rounded-xl px-4 py-3 font-mono text-sm"
+                    />
+                    <p className="text-xs text-text-dim mt-1">
+                      Your key is stored only on this device.
+                    </p>
+                  </div>
+                )}
+
+                {/* Model override — advanced, collapsed by default */}
+                {settings.aiProvider !== 'free' && (
+                  <details className="text-sm">
+                    <summary className="text-text-dim cursor-pointer">Advanced: Custom model</summary>
+                    <input
+                      type="text"
+                      value={settings.aiModel ?? ''}
+                      onChange={(e) => settings.updateSettings({ aiModel: e.target.value || null })}
+                      placeholder={
+                        settings.aiProvider === 'anthropic' ? 'claude-sonnet-4-20250514' :
+                        settings.aiProvider === 'openai' ? 'gpt-4o-mini' :
+                        'gemini-2.0-flash'
+                      }
+                      className="w-full mt-2 bg-surface-light text-text border border-surface-light rounded-xl px-4 py-3 font-mono text-sm"
+                    />
+                  </details>
+                )}
+
+                {settings.aiProvider === 'free' && (
+                  <p className="text-xs text-text-dim bg-surface-light p-3 rounded-xl">
+                    Free coaching uses Google Gemini Flash. Limited to ~20 sessions per hour. For unlimited coaching, add your own API key above.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+
         {/* Reading Pace */}
         <Card>
           <h3 className="font-bold mb-4">Time Estimates</h3>

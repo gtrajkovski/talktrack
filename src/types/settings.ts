@@ -31,6 +31,14 @@ export interface UserSettings {
   useVoiceBoxClone: boolean;
   voiceBoxCloneUrl: string;
   voiceBoxCloneVoiceId: string;
+  // Voice intelligence tracking
+  commandsLearned: Record<string, number>; // command -> usage count
+  totalSessionsEver: number;
+  // AI Coach settings
+  aiProvider: 'free' | 'anthropic' | 'openai' | 'google';
+  aiApiKey: string | null;        // BYOK key (null = use free tier)
+  aiModel: string | null;         // Custom model override (null = use default)
+  enableAiCoach: boolean;         // Master toggle (default: true)
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -63,4 +71,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
   useVoiceBoxClone: false,
   voiceBoxCloneUrl: "http://localhost:5000",
   voiceBoxCloneVoiceId: "",
+  // Voice intelligence defaults
+  commandsLearned: {},
+  totalSessionsEver: 0,
+  // AI Coach defaults
+  aiProvider: 'free',
+  aiApiKey: null,
+  aiModel: null,
+  enableAiCoach: true,
 };
