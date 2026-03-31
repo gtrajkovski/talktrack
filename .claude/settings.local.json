@@ -33,7 +33,8 @@
       "Bash(cmd //c \"taskkill /PID 15616 /F\")",
       "Bash(start:*)",
       "Bash(wc:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(npx cap init:*)"
     ]
   }
 }
