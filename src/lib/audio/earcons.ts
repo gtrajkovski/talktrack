@@ -6,9 +6,12 @@
  * Each earcon is ≤300ms, non-intrusive, and tonally distinct.
  */
 
+import { getCachedSpeakerPreference, applySpeakerToContext } from "./devices";
+
 let audioContext: AudioContext | null = null;
 let globalVolume = 0.3;
 let enabled = true;
+let speakerApplied = false;
 
 /**
  * Check if earcons should play based on settings and reduced motion preference
@@ -23,18 +26,37 @@ function shouldPlay(): boolean {
 }
 
 /**
- * Get or create AudioContext with iOS resume handling
+ * Get or create AudioContext with iOS resume handling and speaker routing
  */
 function getContext(): AudioContext {
   if (!audioContext) {
     audioContext = new (window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    speakerApplied = false;
   }
   // Resume if suspended (iOS requires user gesture to activate)
   if (audioContext.state === 'suspended') {
     audioContext.resume();
   }
+  // Apply speaker preference (async, but we don't wait - it applies for future sounds)
+  if (!speakerApplied && audioContext) {
+    speakerApplied = true;
+    const { label, groupId } = getCachedSpeakerPreference();
+    if (label) {
+      applySpeakerToContext(audioContext, label, groupId).catch(() => {
+        // Ignore errors - fallback to default speaker
+      });
+    }
+  }
   return audioContext;
+}
+
+/**
+ * Force refresh of speaker routing (call when settings change)
+ */
+export function refreshSpeakerRouting(): void {
+  speakerApplied = false;
+  // Next getContext() call will re-apply speaker preference
 }
 
 /**
@@ -435,6 +457,16 @@ export function onPace(): void {
 }
 
 /**
+ * Barge-in success - quick double-tap indicating TTS was interrupted
+ * F4 (349Hz) double tap, faster than errorRetry, distinct pitch
+ */
+export function bargeIn(): void {
+  if (!shouldPlay()) return;
+  playTone(349, 0.05, 'triangle', 0.4);
+  setTimeout(() => playTone(349, 0.05, 'triangle', 0.4), 60);
+}
+
+/**
  * Coach start - warm, friendly tone that says "here's your coach"
  * Two ascending notes with a soft attack — distinct from level-up (which is a celebration)
  * A3 → C#4 (warm major third)
@@ -474,6 +506,7 @@ export const earcons = {
   getVolume,
   setEnabled,
   isEnabled,
+  refreshSpeakerRouting,
   slideAdvance,
   slideBack,
   micOn,
@@ -501,6 +534,7 @@ export const earcons = {
   levelUp,
   levelDown,
   onPace,
+  bargeIn,
   coachStart,
 };
 

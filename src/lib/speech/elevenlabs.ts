@@ -1,6 +1,8 @@
 // ElevenLabs Text-to-Speech API Client
 // BYOK (Bring Your Own Key) integration with caching
 
+import { getCachedSpeakerPreference, applySpeakerToAudio } from "@/lib/audio/devices";
+
 const API_BASE = "https://api.elevenlabs.io/v1";
 
 export interface ElevenLabsVoice {
@@ -191,6 +193,13 @@ export async function speak(
 
     currentAudio = new Audio(blobUrl);
     currentAudio.volume = currentVolumeLevel;
+
+    // Apply speaker preference if set
+    const { label, groupId } = getCachedSpeakerPreference();
+    if (label) {
+      await applySpeakerToAudio(currentAudio, label, groupId);
+    }
+
     currentAudio.onended = () => {
       currentAudio = null;
       onEndCallback?.();

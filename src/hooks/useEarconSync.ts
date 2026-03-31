@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRehearsalStore, type AudioState } from '@/stores/rehearsalStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import * as earcons from '@/lib/audio/earcons';
+import { setCachedSpeakerPreference, setCachedMicPreference } from '@/lib/audio/devices';
 
 /**
  * Hook that syncs earcon settings and plays earcons on audio state transitions.
@@ -13,7 +14,14 @@ export function useEarconSync(): void {
   const audioState = useRehearsalStore((s) => s.audioState);
   const lastCommandTimestamp = useRehearsalStore((s) => s.lastCommandTimestamp);
 
-  const { enableEarcons, earconVolume } = useSettingsStore();
+  const {
+    enableEarcons,
+    earconVolume,
+    preferredSpeakerLabel,
+    preferredSpeakerGroupId,
+    preferredMicLabel,
+    preferredMicGroupId,
+  } = useSettingsStore();
 
   const prevAudioStateRef = useRef<AudioState>(audioState);
   const prevCommandTimestampRef = useRef<number | null>(lastCommandTimestamp);
@@ -23,6 +31,14 @@ export function useEarconSync(): void {
     earcons.setVolume(earconVolume);
     earcons.setEnabled(enableEarcons);
   }, [enableEarcons, earconVolume]);
+
+  // Sync audio device preferences
+  useEffect(() => {
+    setCachedSpeakerPreference(preferredSpeakerLabel, preferredSpeakerGroupId);
+    setCachedMicPreference(preferredMicLabel, preferredMicGroupId);
+    // Refresh earcon speaker routing when preference changes
+    earcons.refreshSpeakerRouting();
+  }, [preferredSpeakerLabel, preferredSpeakerGroupId, preferredMicLabel, preferredMicGroupId]);
 
   // Play earcons on audio state transitions
   useEffect(() => {

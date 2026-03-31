@@ -16,6 +16,7 @@ import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
+import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
@@ -36,6 +37,8 @@ interface TestModeProps {
 
 // Detect iOS for speech overlap workaround
 const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+const SILENCE_NUDGE_DELAY = 15000; // 15 seconds before nudge
 
 export function TestMode({
   slides,
@@ -97,6 +100,9 @@ export function TestMode({
   const lastCommandTimeRef = useRef(0);
   const errorRetryCountRef = useRef(0);
   const transcriptRef = useRef("");
+  const micWarmupStreamRef = useRef<MediaStream | null>(null);
+  const silenceNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceNudgeShownRef = useRef(false);
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
@@ -129,6 +135,9 @@ export function TestMode({
       try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
+    // Clean up mic warmup stream
+    stopStream(micWarmupStreamRef.current);
+    micWarmupStreamRef.current = null;
   }, []);
 
   const handleNextRef = useRef<() => void>(() => {});
@@ -137,10 +146,11 @@ export function TestMode({
   const handleHelpRef = useRef<() => void>(() => {});
   const handleStopRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
+  const handleInterruptRef = useRef<(cmd: string) => void>(() => {});
   const startListeningRef = useRef<() => void>(() => {});
 
   // Start speech recognition with error recovery
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
     if (!isMountedRef.current) return;
 
@@ -164,7 +174,27 @@ export function TestMode({
       startRecording();
     }
 
+    // Clear and reset silence nudge timer
+    if (silenceNudgeTimerRef.current) {
+      clearTimeout(silenceNudgeTimerRef.current);
+    }
+    silenceNudgeTimerRef.current = setTimeout(() => {
+      if (isListeningRef.current && isMountedRef.current && !silenceNudgeShownRef.current) {
+        silenceNudgeShownRef.current = true;
+        earcons.deadAirNudge();
+        voicebox.play("Still listening — take your time, or say next when ready", {
+          rate: 0.9,
+          onEnd: () => {
+            if (isMountedRef.current) startListeningRef.current();
+          },
+        });
+      }
+    }, SILENCE_NUDGE_DELAY);
+
     try {
+      // Warm up preferred mic (may help route recognition to selected device)
+      micWarmupStreamRef.current = await warmupPreferredMic();
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -292,12 +322,15 @@ export function TestMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
+      // Barge-in: allow interrupting TTS with voice commands
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript, commandLanguage]);
 
   const handleHelp = useCallback(() => {
     stopListening();
@@ -318,12 +351,15 @@ export function TestMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
+      // Barge-in: allow interrupting TTS with voice commands
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.notes, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState]);
+  }, [currentSlide.notes, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState, commandLanguage]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
@@ -389,6 +425,28 @@ export function TestMode({
     setAudioState("listening");
   }, [stopListening, startListening, setAudioState]);
 
+  // Handle barge-in (interrupt TTS with voice command)
+  const handleInterrupt = useCallback((command: string) => {
+    voicebox.stop();
+    earcons.bargeIn();
+    setLastCommand(command);
+
+    switch (command) {
+      case "next":
+        handleNextRef.current();
+        break;
+      case "back":
+        handleBackRef.current();
+        break;
+      case "stop":
+        handleStopRef.current();
+        break;
+      case "resume":
+        handleResumeRef.current();
+        break;
+    }
+  }, [setLastCommand]);
+
   // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
   useEffect(() => {
     handleNextRef.current = handleNext;
@@ -397,6 +455,7 @@ export function TestMode({
     handleHelpRef.current = handleHelp;
     handleStopRef.current = handleStop;
     handleResumeRef.current = handleResume;
+    handleInterruptRef.current = handleInterrupt;
   });
 
   // Track mounted state for cleanup

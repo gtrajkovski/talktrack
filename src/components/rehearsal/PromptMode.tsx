@@ -16,6 +16,7 @@ import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
+import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
@@ -101,6 +102,7 @@ export function PromptMode({
   const transcriptRef = useRef("");
   const silenceNudgeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const silenceNudgeShownRef = useRef(false); // Only show once per slide
+  const micWarmupStreamRef = useRef<MediaStream | null>(null);
 
   const currentSlide = slides[currentIndex];
   const isLastSlide = currentIndex === slides.length - 1;
@@ -138,6 +140,9 @@ export function PromptMode({
       }
       recognitionRef.current = null;
     }
+    // Clean up mic warmup stream
+    stopStream(micWarmupStreamRef.current);
+    micWarmupStreamRef.current = null;
   }, []);
 
   // Handlers need to be refs to avoid stale closures
@@ -147,10 +152,11 @@ export function PromptMode({
   const handleRevealRef = useRef<() => void>(() => {});
   const handleStopRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
+  const handleInterruptRef = useRef<(cmd: string) => void>(() => {});
   const startListeningRef = useRef<() => void>(() => {});
 
   // Start speech recognition with error recovery
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
     if (!isMountedRef.current) return;
 
@@ -167,7 +173,7 @@ export function PromptMode({
     silenceNudgeTimerRef.current = setTimeout(() => {
       if (isListeningRef.current && isMountedRef.current && !silenceNudgeShownRef.current) {
         silenceNudgeShownRef.current = true;
-        earcons.errorRetry();
+        earcons.deadAirNudge();
         voicebox.play("Still listening — take your time, or say next to move on", {
           rate: 0.9,
           onEnd: () => {
@@ -193,6 +199,9 @@ export function PromptMode({
     }
 
     try {
+      // Warm up preferred mic (may help route recognition to selected device)
+      micWarmupStreamRef.current = await warmupPreferredMic();
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -341,12 +350,15 @@ export function PromptMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
+      // Barge-in: allow interrupting TTS with voice commands
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.title, currentCue, currentLabel, granularity, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript]);
+  }, [currentSlide.title, currentCue, currentLabel, granularity, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript, commandLanguage]);
 
   const handleReveal = useCallback(() => {
     stopListening();
@@ -371,12 +383,15 @@ export function PromptMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
+      // Barge-in: allow interrupting TTS with voice commands
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
       onEnd: () => {
         setAudioState("idle");
         startListening();
       },
     });
-  }, [currentSlide.notes, currentContent, isChunkMode, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState]);
+  }, [currentSlide.notes, currentContent, isChunkMode, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, onUsedHelp, setAudioState, commandLanguage]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
@@ -449,6 +464,28 @@ export function PromptMode({
     setAudioState("listening");
   }, [stopListening, startListening, setAudioState]);
 
+  // Handle barge-in (interrupt TTS with voice command)
+  const handleInterrupt = useCallback((command: string) => {
+    voicebox.stop();
+    earcons.bargeIn();
+    setLastCommand(command);
+
+    switch (command) {
+      case "next":
+        handleNextRef.current();
+        break;
+      case "back":
+        handleBackRef.current();
+        break;
+      case "stop":
+        handleStopRef.current();
+        break;
+      case "resume":
+        handleResumeRef.current();
+        break;
+    }
+  }, [setLastCommand]);
+
   // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
   useEffect(() => {
     handleNextRef.current = handleNext;
@@ -457,6 +494,7 @@ export function PromptMode({
     handleRevealRef.current = handleReveal;
     handleStopRef.current = handleStop;
     handleResumeRef.current = handleResume;
+    handleInterruptRef.current = handleInterrupt;
   });
 
   // Track mounted state for cleanup

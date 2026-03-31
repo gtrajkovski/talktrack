@@ -10,6 +10,7 @@ import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import * as earcons from "@/lib/audio/earcons";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
+import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
@@ -79,6 +80,7 @@ export function ListenMode({
   const isMountedRef = useRef(true);
   const lastCommandTimeRef = useRef(0);
   const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const micWarmupStreamRef = useRef<MediaStream | null>(null);
 
   // Handler refs to avoid stale closures
   const handleNextRef = useRef<() => void>(() => {});
@@ -86,6 +88,7 @@ export function ListenMode({
   const handleRepeatRef = useRef<() => void>(() => {});
   const handlePauseRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
+  const handleInterruptRef = useRef<(cmd: string) => void>(() => {});
   const startListeningRef = useRef<() => void>(() => {});
   const speakContentRef = useRef<() => void>(() => {});
 
@@ -123,10 +126,13 @@ export function ListenMode({
       }
       recognitionRef.current = null;
     }
+    // Clean up mic warmup stream
+    stopStream(micWarmupStreamRef.current);
+    micWarmupStreamRef.current = null;
   }, []);
 
   // Start speech recognition for voice commands
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
     if (!isMountedRef.current) return;
 
@@ -145,6 +151,9 @@ export function ListenMode({
     stopListening();
 
     try {
+      // Warm up preferred mic (may help route recognition to selected device)
+      micWarmupStreamRef.current = await warmupPreferredMic();
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -242,6 +251,9 @@ export function ListenMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
+      // Barge-in: allow interrupting TTS with voice commands
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
       onEnd: () => {
         if (!isMountedRef.current) return;
         setStatus("idle");
@@ -284,7 +296,7 @@ export function ListenMode({
         }
       },
     });
-  }, [currentContent, currentSlide.notes, speechRate, voiceName, autoAdvance, autoAdvanceDelay, isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, isSlideTransition, setAudioState, clearAutoAdvanceTimer, startListening]);
+  }, [currentContent, currentSlide.notes, speechRate, voiceName, autoAdvance, autoAdvanceDelay, isChunkMode, isLastChunk, isLastSlide, onComplete, onNext, onNextChunk, isSlideTransition, setAudioState, clearAutoAdvanceTimer, startListening, commandLanguage]);
 
   const handleRepeat = useCallback(() => {
     voicebox.stop();
@@ -367,6 +379,29 @@ export function ListenMode({
     speakContent();
   }, [speakContent, stopListening]);
 
+  // Handle barge-in (interrupt TTS with voice command)
+  const handleInterrupt = useCallback((command: string) => {
+    voicebox.stop();
+    earcons.bargeIn();
+    setLastCommand(command);
+
+    switch (command) {
+      case "next":
+        handleNextRef.current();
+        break;
+      case "back":
+        handleBackRef.current();
+        break;
+      case "stop":
+        handlePauseRef.current();
+        break;
+      case "resume":
+        // Already stopped TTS, just resume
+        handleResumeRef.current();
+        break;
+    }
+  }, [setLastCommand]);
+
   // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
   useEffect(() => {
     handleNextRef.current = handleNext;
@@ -374,6 +409,7 @@ export function ListenMode({
     handleRepeatRef.current = handleRepeat;
     handlePauseRef.current = handlePause;
     handleResumeRef.current = handleResume;
+    handleInterruptRef.current = handleInterrupt;
     startListeningRef.current = startListening;
     speakContentRef.current = speakContent;
   });

@@ -1,6 +1,8 @@
 // VoiceBox Clone - Local TTS Server Client
 // Generic interface for local TTS servers (VoiceBox, Coqui, etc.)
 
+import { getCachedSpeakerPreference, applySpeakerToAudio } from "@/lib/audio/devices";
+
 export interface VoiceBoxCloneVoice {
   id: string;
   name: string;
@@ -159,6 +161,13 @@ export async function speak(
 
     currentAudio = new Audio(blobUrl);
     currentAudio.volume = currentVolumeLevel;
+
+    // Apply speaker preference if set
+    const { label, groupId } = getCachedSpeakerPreference();
+    if (label) {
+      await applySpeakerToAudio(currentAudio, label, groupId);
+    }
+
     currentAudio.onended = () => {
       currentAudio = null;
       onEndCallback?.();
