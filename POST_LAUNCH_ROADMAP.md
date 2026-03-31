@@ -151,7 +151,7 @@ After importing a talk, use an LLM to generate comprehension questions about the
 ---
 
 ## Phase 6: Distribution & Growth
-**Status:** NOT STARTED
+**Status:** COMPLETE
 **Priority:** MEDIUM — after core product is solid
 
 ### 6A: Landing Page & SEO
