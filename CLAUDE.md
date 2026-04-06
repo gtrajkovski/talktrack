@@ -1,560 +1,123 @@
-# CLAUDE.md — TalkTrack: Voice-First Rehearsal Coach
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-TalkTrack is a mobile-first web app that lets people rehearse spoken content (presentations, speeches, pitches, scripts, sermons, lines) entirely hands-free and eyes-free. The core use case: someone driving to a conference who wants to rehearse their presentation using only their voice and ears.
+TalkTrack is a mobile-first PWA for hands-free, eyes-free rehearsal of spoken content (presentations, speeches, scripts). The core use case: rehearsing a presentation while driving, using only voice commands and audio feedback.
 
-No existing tool does this. PowerPoint Speaker Coach, Orai, Speeko, and Yoodli all require looking at a screen. TalkTrack is the first rehearsal tool designed for commuters.
-
-## Post-Launch Roadmap
-See `POST_LAUNCH_ROADMAP.md` for the sequenced plan of all features and improvements planned after v1.0 launch.
-
-## Tech Stack
-
-- **Framework**: Next.js 14+ (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS 3.x
-- **State**: Zustand (lightweight, no boilerplate)
-- **Speech Synthesis**: Web Speech API (SpeechSynthesis) with fallback to browser defaults
-- **Speech Recognition**: Web Speech API (SpeechRecognition / webkitSpeechRecognition)
-- **File Parsing**: mammoth (for .docx), jszip + custom XML parser (for .pptx speaker notes extraction)
-- **Audio**: Web Audio API for chimes/tones between slides
-- **PWA**: next-pwa for installable mobile experience with offline support
-- **Database**: IndexedDB via idb for local storage of talks, progress, recordings
-- **Hosting**: Vercel
-- **Testing**: Vitest + React Testing Library
-
-## Project Structure
-
-```
-talktrack/
-├── CLAUDE.md
-├── PROJECT.md
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-├── next.config.ts
-├── public/
-│   ├── manifest.json
-│   ├── icons/
-│   ├── sounds/
-│   │   ├── chime.mp3
-│   │   ├── start.mp3
-│   │   └── complete.mp3
-│   └── sw.js
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── talk/
-│   │   │   ├── [id]/
-│   │   │   │   ├── page.tsx
-│   │   │   │   ├── rehearse/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   ├── slides/
-│   │   │   │   │   └── page.tsx
-│   │   │   │   └── stats/
-│   │   │   │       └── page.tsx
-│   │   ├── import/
-│   │   │   └── page.tsx
-│   │   └── settings/
-│   │       └── page.tsx
-│   ├── components/
-│   │   ├── ui/
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── ProgressBar.tsx
-│   │   │   ├── Badge.tsx
-│   │   │   ├── Modal.tsx
-│   │   │   └── BigTapButton.tsx
-│   │   ├── rehearsal/
-│   │   │   ├── ListenMode.tsx
-│   │   │   ├── PromptMode.tsx
-│   │   │   ├── TestMode.tsx
-│   │   │   ├── SlideHeader.tsx
-│   │   │   ├── VoiceStatus.tsx
-│   │   │   ├── RehearsalControls.tsx
-│   │   │   └── CompletionScreen.tsx
-│   │   ├── import/
-│   │   │   ├── PasteImport.tsx
-│   │   │   ├── FileUpload.tsx
-│   │   │   └── VoiceRecord.tsx
-│   │   └── layout/
-│   │       ├── AppShell.tsx
-│   │       ├── BottomNav.tsx
-│   │       └── Header.tsx
-│   ├── lib/
-│   │   ├── speech/
-│   │   │   ├── synthesis.ts
-│   │   │   ├── recognition.ts
-│   │   │   ├── voiceCommands.ts
-│   │   │   └── voices.ts
-│   │   ├── audio/
-│   │   │   └── chime.ts
-│   │   ├── parsers/
-│   │   │   ├── pptx.ts
-│   │   │   ├── docx.ts
-│   │   │   ├── text.ts
-│   │   │   └── markdown.ts
-│   │   ├── db/
-│   │   │   ├── index.ts
-│   │   │   ├── talks.ts
-│   │   │   ├── sessions.ts
-│   │   │   └── recordings.ts
-│   │   ├── scoring/
-│   │   │   ├── similarity.ts
-│   │   │   ├── pacing.ts
-│   │   │   └── fillerWords.ts
-│   │   └── utils/
-│   │       ├── wordCount.ts
-│   │       ├── estimateTime.ts
-│   │       └── formatDuration.ts
-│   ├── stores/
-│   │   ├── rehearsalStore.ts
-│   │   ├── settingsStore.ts
-│   │   └── talksStore.ts
-│   └── types/
-│       ├── talk.ts
-│       ├── session.ts
-│       └── settings.ts
-└── tests/
-    ├── parsers/
-    │   ├── pptx.test.ts
-    │   ├── text.test.ts
-    │   └── markdown.test.ts
-    ├── speech/
-    │   └── voiceCommands.test.ts
-    └── scoring/
-        └── similarity.test.ts
-```
-
-## Data Models
-
-```typescript
-// types/talk.ts
-interface Talk {
-  id: string;                    // nanoid
-  title: string;
-  slides: Slide[];
-  createdAt: number;
-  updatedAt: number;
-  totalRehearsals: number;
-  source: "paste" | "pptx" | "docx" | "voice" | "demo";
-}
-
-interface Slide {
-  id: string;
-  index: number;
-  title: string;
-  notes: string;
-  wordCount: number;
-  estimatedSeconds: number;      // wordCount / wordsPerMinute * 60
-  timesRehearsed: number;
-  lastScore?: number;            // 0-100 similarity score
-  keyPhrases?: string[];
-}
-
-// types/session.ts
-interface RehearsalSession {
-  id: string;
-  talkId: string;
-  mode: "listen" | "prompt" | "test";
-  startedAt: number;
-  completedAt?: number;
-  slidesCompleted: number;
-  totalSlides: number;
-  attempts: SlideAttempt[];
-}
-
-interface SlideAttempt {
-  slideId: string;
-  slideIndex: number;
-  spokenText?: string;
-  similarityScore?: number;
-  wordsPerMinute?: number;
-  fillerWordCount?: number;
-  duration?: number;
-  usedHelp: boolean;
-}
-
-// types/settings.ts
-interface UserSettings {
-  voiceName: string;
-  speechRate: number;            // 0.7 - 1.3 (default 0.95)
-  autoAdvance: boolean;          // default true
-  autoAdvanceDelay: number;      // seconds (default 1)
-  showWordCount: boolean;
-  enableVoiceCommands: boolean;  // default TRUE — voice is primary input
-  theme: "dark" | "light";      // default dark
-  wordsPerMinute: number;        // default 100
-}
-```
-
-## Build Instructions
-
-Build TalkTrack from scratch following this exact order. Each step is a vertical slice — get it fully working before moving to the next.
-
-### Step 1: Project Setup
-
-```bash
-npx create-next-app@latest . --typescript --tailwind --app --src-dir --eslint
-npm install zustand idb jszip mammoth nanoid
-```
-
-- Set up Tailwind config with the design system colors below
-- Set up Google Font "Outfit" in layout.tsx
-- Add PWA meta tags (viewport, apple-mobile-web-app-capable, theme-color)
-- Create CSS variables in globals.css
-
-### Step 2: Types & Data Layer
-
-1. Create `types/talk.ts`, `types/session.ts`, `types/settings.ts` matching the interfaces above
-2. Create `lib/db/index.ts` — IndexedDB setup via idb with stores for talks, sessions, recordings
-3. Create `lib/db/talks.ts` — CRUD (getAllTalks, getTalk, createTalk, updateTalk, deleteTalk)
-4. Create `lib/db/sessions.ts` — session history CRUD
-5. Create Zustand stores: `stores/talksStore.ts`, `stores/rehearsalStore.ts`, `stores/settingsStore.ts`
-6. Create `lib/utils/wordCount.ts`, `estimateTime.ts`, `formatDuration.ts`
-
-### Step 3: UI Primitives
-
-Build in `components/ui/`:
-- **Button.tsx** — full-width, min 60px tall, scale(0.97) on active, variants: primary (amber), secondary (surface-light), danger
-- **Card.tsx** — surface background, 16px radius, padding
-- **ProgressBar.tsx** — smooth width transition 400ms, amber fill
-- **Badge.tsx** — status badges ("Listening...", "Your turn", etc.)
-- **Modal.tsx** — bottom sheet style for mobile
-- **BigTapButton.tsx** — extra-large 60px+ touch targets for driving
-
-All: Tailwind, dark theme default, min 48px touch targets.
-
-### Step 4: Layout Shell
-
-1. `components/layout/AppShell.tsx` — main wrapper with safe areas
-2. `components/layout/Header.tsx` — top bar with title + optional back button
-3. `components/layout/BottomNav.tsx` — 3 tabs: Home, Import, Settings (large tap targets)
-4. Wire into `app/layout.tsx`
-
-### Step 5: Import Flow (Paste-to-Rehearse)
-
-1. `app/import/page.tsx` — tabbed: Paste / Upload / Record
-2. `components/import/PasteImport.tsx`:
-   - Large textarea for pasting text
-   - Parse: split by blank lines, first line = slide title, rest = notes
-   - Preview parsed slides before saving
-   - Generate nanoid for talk and each slide
-   - Calculate wordCount and estimatedSeconds per slide
-   - Save to IndexedDB via talksStore
-   - Navigate to home after save
-3. `components/import/FileUpload.tsx` — stub "Coming Soon" for now
-4. `components/import/VoiceRecord.tsx` — stub for now
-
-### Step 6: Home Screen
-
-1. `app/page.tsx` — list all talks from IndexedDB
-   - Each: title, slide count, total rehearsals, last practiced
-   - Tap → navigate to `/talk/[id]`
-   - Empty state: "No talks yet. Import your first one."
-   - Prominent button to `/import`
-2. `app/talk/[id]/page.tsx` — talk detail:
-   - Title, slide count, time estimate
-   - Three big mode buttons: Listen, Prompt, Test (each with description)
-   - "View Slides" → `/talk/[id]/slides`
-   - "Stats" → `/talk/[id]/stats`
-3. `app/talk/[id]/slides/page.tsx` — view/edit all slides
-
-### Step 7: Speech Synthesis
-
-1. `lib/speech/synthesis.ts`:
-   - `speak(text, rate?)` — wraps SpeechSynthesisUtterance
-   - `stop()` — calls `speechSynthesis.cancel()`
-   - `pause()` / `resume()`
-   - `onEnd` callback
-   - Handle `voiceschanged` event for voice loading
-   - Break long text into sentences (Chrome Android bug workaround)
-   - Always `cancel()` before new `speak()`
-2. `lib/speech/voices.ts` — voice selection, quality detection
-3. `lib/audio/chime.ts` — Web Audio API:
-   - `slideTransition()` — short pleasant chime
-   - `sessionStart()` — ascending tone
-   - `sessionComplete()` — celebratory tone
-
-### Step 8: Rehearsal Screen — Listen Mode (CORE EXPERIENCE)
-
-`app/talk/[id]/rehearse/page.tsx`:
-
-**CRITICAL DESIGN PRINCIPLE**: The app is ALWAYS LISTENING during Prompt and Test modes via speech recognition. Voice commands are the PRIMARY interaction — tap buttons are just a fallback. The user should be able to complete an entire rehearsal session without touching the screen. Speech recognition must start automatically when it's the user's turn and stay active until the mode changes.
-
-1. `components/rehearsal/SlideHeader.tsx` — "Slide 3 of 12", large title
-2. `components/rehearsal/VoiceStatus.tsx` — badge: "Playing...", "Paused", "Your turn — listening..."
-3. Giant ProgressBar at top
-4. `components/rehearsal/ListenMode.tsx`:
-   - Auto-play: TTS reads current slide's notes
-   - On complete: chime, wait autoAdvanceDelay, advance
-   - Controls row (equal-width, min 52px): Back / Repeat / Next (tap fallback)
-   - Voice commands active: say "next", "repeat", "go back" — no tap needed
-   - Session start sound on mount, complete sound on last slide
-5. `components/rehearsal/RehearsalControls.tsx` — shared control bar (tap fallback)
-6. `components/rehearsal/CompletionScreen.tsx` — "Rehearsal Complete!" + stats
-7. Wire rehearsalStore: currentSlideIndex, mode, isPlaying, sessionData
-
-**Must have**: 60px primary buttons, 52px secondary, 200ms fade transitions, dark theme, huge tap targets. Voice commands always active — buttons are fallback only.
-
-### Step 9: Prompt Mode (VOICE-FIRST)
-
-`components/rehearsal/PromptMode.tsx`:
-1. TTS reads slide title only, then pauses
-2. Speech recognition starts AUTOMATICALLY — app is now listening
-3. VoiceStatus: "Your turn — listening..."
-4. User speaks from memory. The app records what they say.
-5. User says **"reveal"** (or "show me", "tell me") → TTS reads the full notes aloud
-6. User says **"next"** → advances to next slide
-7. User says **"repeat"** → re-reads the title
-8. User says **"go back"** → previous slide
-9. Tap buttons exist as fallback only ("Reveal Answer", Back/Repeat/Next)
-10. Track `usedHelp: true` if they said "reveal" or tapped Reveal
-
-**The key insight**: after TTS finishes reading the title, the mic is ON. The user just talks. They never need to touch the phone. When they're done reciting, they say "next" to move on, or "reveal" if they're stuck.
-
-### Step 10: Test Mode (VOICE-FIRST)
-
-`components/rehearsal/TestMode.tsx`:
-1. TTS reads "Slide [N]: [title]" only
-2. Speech recognition starts AUTOMATICALLY — app is listening
-3. VoiceStatus: "Your turn — listening..."
-4. User recites everything from memory. App records it.
-5. User says **"help"** or **"need help"** → TTS reads notes aloud (usedHelp: true)
-6. User says **"next"** or **"got it"** → advances to next slide
-7. User says **"repeat"** → re-reads slide number and title
-8. User says **"go back"** → previous slide
-9. Tap buttons exist as fallback only
-10. Scoring happens automatically: compare what they said vs. original notes
-
-**iOS caveat**: Recognition and synthesis cannot run simultaneously. When TTS is speaking (reading notes after "reveal"/"help"), pause recognition. Resume it automatically when TTS finishes.
-
-### Step 11: Settings
-
-`app/settings/page.tsx`:
-- Voice selection dropdown
-- Speech rate slider (0.7 - 1.3, default 0.95)
-- Auto-advance toggle + delay slider
-- Words per minute setting
-- Theme toggle (dark/light)
-- Voice commands toggle
-- Persist via settingsStore → IndexedDB
-
-### Step 12: Stats
-
-`app/talk/[id]/stats/page.tsx`:
-- Total rehearsals count
-- Per-slide breakdown: times rehearsed, word count, estimated time
-- Session history with dates and mode
-
-### Step 13: Text & Markdown Parsers
-
-`lib/parsers/text.ts`:
-- Split by double newlines
-- First line = title, rest = notes
-- Calculate wordCount and estimatedSeconds
-
-`lib/parsers/markdown.ts`:
-- `## heading` = slide title
-- Content below = notes
-
-### Step 14: PPTX & DOCX Parsers
-
-`lib/parsers/pptx.ts`:
-- JSZip to unzip .pptx ArrayBuffer
-- Extract titles from `ppt/slides/slideN.xml` (`<p:ph type="title"/>` placeholder)
-- Extract notes from `ppt/notesSlides/notesSlideN.xml` (all `<a:t>` text nodes)
-- Filter out auto-generated slide number text
-- Return `Slide[]`
-
-`lib/parsers/docx.ts`:
-- mammoth.js to parse
-- Split by H1/H2 headings or blank lines
-
-Wire `FileUpload.tsx` to use parsers with file type detection.
-
-### Step 15: Speech Recognition
-
-`lib/speech/recognition.ts`:
-- Wrapper around `webkitSpeechRecognition`
-- `listen()` — continuous with interimResults
-- `stop()`, `onResult` callback
-- Auto-restart on silence (onend handler)
-- Feature detection + graceful fallback
-
-`lib/speech/voiceCommands.ts`:
-- Match last 5 words of transcript
-- Commands: next, back, repeat, reveal, help, stop, resume
-- Simple keyword matching
-- Return command name or null
-
-`lib/scoring/similarity.ts`:
-- Normalize (lowercase, remove punctuation)
-- Tokenize, remove stop words
-- Word overlap percentage
-- Bonus for key phrases, cap at 100
-
-`lib/scoring/fillerWords.ts`:
-- Detect "um", "uh", "like", "you know", "so", "basically", "actually"
-
-`lib/scoring/pacing.ts`:
-- Words per minute from transcript + duration
-
-Integrate into Prompt/Test modes: record speech, show transcript, display score/filler count/WPM.
-
-## Voice Commands Spec
-
-```typescript
-const COMMANDS = {
-  next:    ["next", "next slide", "forward", "continue", "skip", "move on"],
-  back:    ["back", "previous", "go back", "last slide", "before"],
-  repeat:  ["repeat", "again", "say that again", "one more time", "replay"],
-  reveal:  ["reveal", "show me", "tell me", "what is it", "answer"],
-  help:    ["help", "hint", "i need help", "stuck", "i don't know"],
-  stop:    ["stop", "pause", "hold on", "wait"],
-  resume:  ["resume", "continue", "go", "keep going", "start"],
-};
-// Match against last 5 words of continuous recognition transcript.
-```
-
-## Design System
-
-### Colors (CSS Variables)
-
-```css
-:root {
-  --bg: #0f1729;
-  --surface: #1a2744;
-  --surface-light: #243352;
-  --accent: #f59e0b;        /* Amber */
-  --accent-dim: #b45309;
-  --blue: #3b82f6;
-  --text: #f1f5f9;
-  --text-dim: #94a3b8;
-  --success: #22c55e;
-  --danger: #ef4444;
-  --radius: 16px;
-  --radius-sm: 12px;
-}
-```
-
-### Typography
-- Font: "Outfit" (Google Fonts, variable weight)
-- Titles: 800 weight, -0.02em tracking
-- Body: 400 weight
-- UI labels: 600 weight, 0.05em tracking, uppercase
-
-### Touch Targets
-- Primary action buttons: min 60px tall, full width
-- Control buttons (Back/Repeat/Next): min 52px tall, equal-width flex row
-- No small icons or links — everything tappable with a thumb
-
-### Animations
-- Slide transitions: 200ms fade
-- Progress bar: 400ms ease width transition
-- Button press: scale(0.97) on active (100ms)
-- Keep minimal — utility app, not visual showcase
-
-## Scoring Algorithm
-
-```
-1. Normalize both strings (lowercase, remove punctuation, trim)
-2. Tokenize into words
-3. Remove stop words (the, a, an, is, was, are, etc.)
-4. Calculate overlap:
-   - contentWords = meaningful words from original notes
-   - spokenWords = meaningful words from user's speech
-   - hits = contentWords that appear in spokenWords
-   - score = (hits.length / contentWords.length) * 100
-5. Bonus: +5 points if user hits ALL key phrases
-6. Cap at 100
-```
-
-## Speech Implementation Notes
-
-### Synthesis Gotchas
-- `speechSynthesis.getVoices()` returns empty on first call. Use `voiceschanged` event.
-- iOS Safari: speech synthesis requires user gesture. First `speak()` must be inside click/tap handler.
-- Chrome Android: sometimes stops mid-sentence. Break long notes into sentences and chain.
-- Always `speechSynthesis.cancel()` before new speech.
-
-### Recognition Gotchas
-- `webkitSpeechRecognition` is correct on most browsers (not `SpeechRecognition`).
-- Set `continuous = true` and `interimResults = true`.
-- Auto-stops after silence — restart in `onend` handler if session active.
-- iOS: recognition and synthesis cannot run simultaneously. Stop synthesis first.
-
-### PWA / Mobile
-- Test on actual phones, not just DevTools responsive mode.
-- iOS Safari has limited Speech Recognition — feature-detect + graceful fallback.
-- `<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">`
-- `<meta name="apple-mobile-web-app-capable" content="yes">`
-
-### Performance
-- IndexedDB operations are async — never block UI.
-- PPTX parsing can be slow — show progress, parse in Web Worker if possible.
-- Keep rehearsal screen React tree shallow — re-renders during speech cause stuttering.
+**Status:** v1.0 shipped. See `POST_LAUNCH_ROADMAP.md` for current phase and priorities.
 
 ## Development Commands
 
 ```bash
-npm install          # Install dependencies
-npm run dev          # Development server
-npm run build        # Build for production
-npm test             # Run tests
+npm run dev          # Dev server (uses --webpack flag for Next.js 16)
+npm run build        # Production build
+npm test             # Run vitest in watch mode
+npm run test:run     # Run tests once (CI)
+npm run test:ui      # Vitest UI
 npx tsc --noEmit     # Type check
-npm run lint         # Lint
+npm run lint         # ESLint
 ```
 
-## Dependencies
-
-```json
-{
-  "dependencies": {
-    "next": "^14.2",
-    "react": "^18.3",
-    "react-dom": "^18.3",
-    "zustand": "^4.5",
-    "idb": "^8.0",
-    "jszip": "^3.10",
-    "mammoth": "^1.8",
-    "nanoid": "^5.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.4",
-    "tailwindcss": "^3.4",
-    "autoprefixer": "^10.4",
-    "postcss": "^8.4",
-    "@types/react": "^18.3",
-    "@types/node": "^20",
-    "vitest": "^1.6",
-    "@testing-library/react": "^15",
-    "eslint": "^8.57",
-    "eslint-config-next": "^14.2"
-  }
-}
+Run a single test file:
+```bash
+npx vitest tests/parsers/pptx.test.ts
+npx vitest -t "should parse slides"  # Run by test name pattern
 ```
 
-## Quality Bar
+## Tech Stack
 
-- Every screen works on 375px wide viewport (iPhone SE)
-- Touch targets 48px minimum, 60px preferred for primary actions
+- **Framework:** Next.js 16 (App Router, React 19, Turbopack — note: uses `--webpack` flag due to PWA compatibility)
+- **State:** Zustand (stores in `src/stores/`)
+- **Database:** IndexedDB via `idb` (all data client-side, see `src/lib/db/`)
+- **Speech:** Web Speech API for synthesis and recognition
+- **File Parsing:** jszip (PPTX), mammoth (DOCX), pdfjs-dist (PDF)
+- **Testing:** Vitest + React Testing Library + fake-indexeddb
+- **Styling:** Tailwind CSS 4
+
+## Architecture
+
+### Data Flow
+```
+User imports content → Parsers (lib/parsers/) → IndexedDB (lib/db/) → Zustand stores → UI
+                                                                    ↓
+                    Speech Recognition ← Rehearsal Session → Speech Synthesis
+```
+
+### Key Stores (`src/stores/`)
+- **rehearsalStore** — Active session state: current slide/chunk, playback, bookmarks, audio state, scoring
+- **talksStore** — CRUD for talks, delegates to `lib/db/talks.ts`
+- **settingsStore** — User preferences (voice, rate, theme), persisted to IndexedDB
+
+### Rehearsal Modes
+- **Listen** — TTS reads all notes, user listens passively
+- **Prompt** — TTS reads title only, user recites from memory, can say "reveal"
+- **Test** — Minimal prompt, user recites everything, scored on similarity
+
+### Speech Integration (`src/lib/speech/`)
+- **synthesis.ts** — TTS wrapper with sentence chunking (Chrome Android workaround), queue management
+- **voices.ts** — Voice quality detection, ElevenLabs/VoiceBox BYOK support
+- **voiceAssistant.ts** — Context-aware help system
+- **sessionDebrief.ts** — End-of-session spoken summary
+
+### Granularity System (`src/lib/utils/chunker.ts`)
+Slides can be rehearsed at different granularities: sentence, paragraph, or full slide. The chunker splits slide content into navigable chunks.
+
+### Voice Commands (`src/hooks/useRehearsalCommands.ts`)
+35+ commands in 4 languages (EN/MK/SQ/IT). Commands are matched against the last 5 words of continuous recognition transcript. Key commands: next, back, repeat, reveal, help, bookmark, faster/slower.
+
+## Testing
+
+Tests are in `tests/` with this structure:
+- `tests/setup.ts` — Global mocks for SpeechSynthesis, SpeechRecognition, AudioContext, IndexedDB
+- `tests/mocks/` — Reusable mock implementations
+- `tests/integration/` — Multi-module tests (import→rehearsal, scoring)
+- `tests/db/`, `tests/parsers/`, `tests/stores/` — Unit tests by domain
+
+The test setup automatically provides:
+- `fake-indexeddb` for IndexedDB operations
+- Mock `speechSynthesis` with configurable duration
+- Mock `webkitSpeechRecognition` for voice command testing
+
+## Critical Constraints
+
+### Speech API Gotchas
+- iOS Safari: recognition and synthesis cannot run simultaneously — pause recognition during TTS
+- Chrome Android: TTS stops mid-sentence on long text — synthesis.ts chunks into sentences
+- `speechSynthesis.getVoices()` returns empty on first call — use `voiceschanged` event
+- Always call `speechSynthesis.cancel()` before new speech
+
+### Mobile Requirements
+- All buttons min 48px touch target, primary actions 60px
 - Dark theme by default (driving at night)
-- Zero external API calls — everything client-side
-- Works offline after first load (PWA)
-- No loading spinners longer than 200ms — optimistic UI
-- Accessible: all buttons have labels, screen reader compatible
-- Rehearsal screen feels like a podcast player, not a slide deck
+- Voice commands are PRIMARY input, tap is fallback
+- Works offline after first load (PWA with service worker)
 
-## Build Strategy
+### Next.js 16 Notes
+- Uses `--webpack` flag in dev/build scripts (Turbopack doesn't work with next-pwa)
+- See AGENTS.md for Next.js version-specific guidance
 
-Build each feature as a working vertical slice. Do NOT scaffold everything at once.
-1. Get paste + Listen mode fully working first
-2. Then add Prompt and Test modes
-3. Then file upload (PPTX parsing)
-4. Then speech recognition and scoring
-5. Then PWA polish
+## File Locations
 
-After each major step, verify with `npm run dev` and `npx tsc --noEmit`.
+| Concern | Location |
+|---------|----------|
+| Routes | `src/app/` (App Router) |
+| UI components | `src/components/ui/` |
+| Rehearsal UI | `src/components/rehearsal/` |
+| Zustand stores | `src/stores/` |
+| IndexedDB layer | `src/lib/db/` |
+| Speech APIs | `src/lib/speech/` |
+| File parsers | `src/lib/parsers/` |
+| Scoring algorithms | `src/lib/scoring/` |
+| Type definitions | `src/types/` |
+| Voice command i18n | `src/lib/i18n/` |
+| Work tracking | `tasks/` (todo.md, backlog.md) |
+
+## Common Tasks
+
+**Adding a voice command:** Update `src/lib/i18n/index.ts` with translations, then update `src/hooks/useRehearsalCommands.ts` to handle the command.
+
+**Adding a file parser:** Create in `src/lib/parsers/`, export from `src/lib/parsers/index.ts`, add to FileUpload component.
+
+**Modifying rehearsal flow:** The rehearsal page (`src/app/talk/[id]/rehearse/page.tsx`) orchestrates mode-specific components. Each mode (Listen/Prompt/Test) has its own component in `src/components/rehearsal/`.

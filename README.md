@@ -19,13 +19,13 @@ No existing rehearsal tool works without looking at a screen. PowerPoint Speaker
 
 ## Tech Stack
 
-- Next.js 14+ (App Router)
+- Next.js 16 (App Router, React 19)
 - TypeScript
-- Tailwind CSS
+- Tailwind CSS 4
 - Zustand (state management)
 - IndexedDB via idb (local storage)
 - Web Speech API (synthesis + recognition)
-- Vitest + React Testing Library (611 tests)
+- Vitest + React Testing Library (696 tests)
 
 ## Getting Started
 

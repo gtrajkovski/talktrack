@@ -4,13 +4,13 @@
 Mobile-first web app that lets people rehearse spoken content (presentations, speeches, pitches, scripts) entirely hands-free and eyes-free. The first rehearsal tool designed for commuters.
 
 ## Tech Stack
-- Next.js 14+ (App Router), TypeScript, Tailwind CSS 3.x
+- Next.js 16 (App Router, React 19), TypeScript, Tailwind CSS 4
 - Zustand for state, IndexedDB via idb for local storage
 - Web Speech API (SpeechSynthesis + SpeechRecognition)
 - JSZip for .pptx parsing, Mammoth for .docx, pdfjs-dist for PDF
 - @mozilla/readability + linkedom for URL content extraction
 - PWA via next-pwa for offline support
-- Vitest + React Testing Library (611 tests)
+- Vitest + React Testing Library (696 tests)
 - Hosted on Vercel
 
 ## Status
