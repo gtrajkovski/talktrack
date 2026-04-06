@@ -15,6 +15,11 @@ import { sessionStart } from "@/lib/audio/chime";
 import { filterSlidesBySection } from "@/lib/utils/sections";
 import { clearSessionHints } from "@/lib/commandHints";
 import { useMediaSession } from "@/hooks/useMediaSession";
+import {
+  startNativeRehearsalSession,
+  endNativeRehearsalSession,
+  updateForegroundNotification,
+} from "@/lib/native";
 import type { RehearsalMode } from "@/types/session";
 
 export default function RehearsalPage() {
@@ -65,14 +70,30 @@ export default function RehearsalPage() {
       clearSessionHints(); // Reset hint tracking for new session
       startSession(sessionTalk, mode).then(() => {
         sessionStart();
+        // Start native capabilities (screen wake + foreground service)
+        const firstSlide = filteredSlides[0];
+        if (firstSlide) {
+          startNativeRehearsalSession(firstSlide.title, 1, filteredSlides.length);
+        }
         setIsLoading(false);
       });
     }
   }, [talk, filteredSlides, mode, startSession]);
 
+  // Update foreground notification when slide changes
+  useEffect(() => {
+    if (filteredSlides.length > 0 && currentSlideIndex >= 0) {
+      const slide = filteredSlides[currentSlideIndex];
+      if (slide) {
+        updateForegroundNotification(slide.title, currentSlideIndex + 1, filteredSlides.length);
+      }
+    }
+  }, [currentSlideIndex, filteredSlides]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      endNativeRehearsalSession();
       endSession();
     };
   }, [endSession]);
@@ -86,10 +107,12 @@ export default function RehearsalPage() {
       setElapsedSeconds(elapsed);
     }
     setIsComplete(true);
+    endNativeRehearsalSession();
     endSession();
   }, [endSession]);
 
   const handleExit = useCallback(() => {
+    endNativeRehearsalSession();
     endSession();
     router.push(`/talk/${params.id}`);
   }, [endSession, router, params.id]);

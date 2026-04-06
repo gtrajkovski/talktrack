@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TalkTrack</string>
+    <string name="title_activity_main">TalkTrack</string>
+    <string name="package_name">com.talktrack.app</string>
+    <string name="custom_url_scheme">com.talktrack.app</string>
+</resources>

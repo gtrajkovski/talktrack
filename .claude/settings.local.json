@@ -34,7 +34,13 @@
       "Bash(start:*)",
       "Bash(wc:*)",
       "Bash(npm run lint:*)",
-      "Bash(npx cap init:*)"
+      "Bash(npx cap init:*)",
+      "Bash(dir /b \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\\\\*.md\")",
+      "Bash(ls:*)",
+      "Bash(explorer \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\")",
+      "Bash(npx cap:*)",
+      "WebSearch",
+      "Bash(./gradlew assembleDebug:*)"
     ]
   }
 }
