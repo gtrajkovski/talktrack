@@ -98,7 +98,7 @@ Leitner box system (1-5) per slide. Score ≥70% promotes, <40% demotes. Increas
 ---
 
 ## Phase 3: Android Native Upgrades (Capacitor Migration)
-**Status:** NOT STARTED
+**Status:** COMPLETE
 **Priority:** MEDIUM — do when users report audio-dies-on-screen-lock
 **Prompt file:** `13b-capacitor-native-android.md` (already written)
 
