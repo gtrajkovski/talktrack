@@ -61,6 +61,12 @@ export interface VoiceCommandSet {
   amIOnPace: string[];       // Check timing vs target
   // AI Coach command
   askCoach: string[];        // Request AI coaching feedback
+  // Warm-up commands
+  warmupStart: string[];     // Start/begin an exercise
+  warmupNext: string[];      // Move to next exercise
+  warmupRepeat: string[];    // Repeat current exercise
+  warmupQuit: string[];      // Quit warm-up session
+  warmupHelp: string[];      // Get help during warm-up
 }
 
 export const LANGUAGE_LABELS: Record<CommandLanguage, string> = {
@@ -144,6 +150,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["set timer", "set time", "target time", "set target"],
     amIOnPace: ["am i on pace", "pace check", "timing", "how's my timing"],
     askCoach: ["coach me", "give me feedback", "what does the coach say", "coaching", "ai feedback", "coach"],
+    // Warm-up commands
+    warmupStart: ["start", "begin", "ready", "go", "let's go"],
+    warmupNext: ["next", "next exercise", "skip", "move on"],
+    warmupRepeat: ["repeat", "again", "one more", "one more time"],
+    warmupQuit: ["quit", "exit", "done", "stop", "i'm done"],
+    warmupHelp: ["help", "what do i do", "instructions"],
   },
 
   // Macedonian (Македонски)
@@ -207,6 +219,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["постави време", "целно време", "постави цел"],
     amIOnPace: ["дали сум на време", "темпо", "проверка на темпо"],
     askCoach: ["тренирај ме", "дај фидбек", "што вели тренерот", "тренер"],
+    // Warm-up commands
+    warmupStart: ["започни", "почни", "готов", "ајде"],
+    warmupNext: ["следно", "следна вежба", "прескокни"],
+    warmupRepeat: ["повтори", "уште еднаш", "пак"],
+    warmupQuit: ["излези", "готово", "крај", "стоп"],
+    warmupHelp: ["помош", "што да правам", "инструкции"],
   },
 
   // Albanian (Shqip) - Kosovo/Albania
@@ -270,6 +288,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["vendos kohën", "koha e synuar", "vendos cakun"],
     amIOnPace: ["jam në ritëm", "kontrolli i ritmit", "koha ime"],
     askCoach: ["trajno mua", "jepmu feedback", "çfarë thotë trajneri", "trajner"],
+    // Warm-up commands
+    warmupStart: ["fillo", "nis", "gati", "hajde"],
+    warmupNext: ["tjetër", "ushtrim tjetër", "kalo"],
+    warmupRepeat: ["përsërit", "prapë", "edhe një herë"],
+    warmupQuit: ["dil", "gati", "fund", "ndalo"],
+    warmupHelp: ["ndihmë", "çfarë të bëj", "udhëzime"],
   },
 
   // Italian (Italiano)
@@ -333,6 +357,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["imposta tempo", "tempo obiettivo", "imposta obiettivo"],
     amIOnPace: ["sono in tempo", "controllo ritmo", "come va il tempo"],
     askCoach: ["consigliami", "dammi feedback", "cosa dice il coach", "coaching", "coach"],
+    // Warm-up commands
+    warmupStart: ["inizia", "comincia", "pronto", "vai"],
+    warmupNext: ["prossimo", "prossimo esercizio", "salta"],
+    warmupRepeat: ["ripeti", "ancora", "un'altra volta"],
+    warmupQuit: ["esci", "finito", "basta", "stop"],
+    warmupHelp: ["aiuto", "cosa devo fare", "istruzioni"],
   },
 
   // Spanish commands
@@ -387,6 +417,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["poner tiempo", "tiempo objetivo", "fijar objetivo"],
     amIOnPace: ["voy a tiempo", "ritmo", "cómo va el tiempo"],
     askCoach: ["entréneme", "dame retroalimentación", "coaching", "entrenador"],
+    // Warm-up commands
+    warmupStart: ["empieza", "comienza", "listo", "vamos"],
+    warmupNext: ["siguiente", "siguiente ejercicio", "salta"],
+    warmupRepeat: ["repite", "otra vez", "una vez más"],
+    warmupQuit: ["salir", "terminar", "basta", "para"],
+    warmupHelp: ["ayuda", "qué hago", "instrucciones"],
   },
 
   // German commands
@@ -441,6 +477,12 @@ export const VOICE_COMMANDS: Record<CommandLanguage, VoiceCommandSet> = {
     setTimer: ["timer setzen", "zielzeit", "ziel setzen"],
     amIOnPace: ["bin ich im zeitplan", "tempo prüfen", "wie ist meine zeit"],
     askCoach: ["trainiere mich", "gib mir feedback", "coaching", "trainer"],
+    // Warm-up commands
+    warmupStart: ["start", "beginnen", "bereit", "los"],
+    warmupNext: ["nächste", "nächste übung", "überspringen"],
+    warmupRepeat: ["wiederholen", "nochmal", "noch einmal"],
+    warmupQuit: ["beenden", "fertig", "schluss", "stopp"],
+    warmupHelp: ["hilfe", "was soll ich tun", "anleitung"],
   },
 };
 

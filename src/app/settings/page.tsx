@@ -301,6 +301,90 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        {/* Warm-Up Settings */}
+        <Card>
+          <h3 className="font-bold mb-4">Warm-Up Exercises</h3>
+          <p className="text-sm text-text-dim mb-4">
+            Voice warm-ups before rehearsal help you sound clear and confident.
+          </p>
+
+          <div className="space-y-4">
+            {/* Enable Warm-Ups */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Enable Warm-Ups</div>
+                <div className="text-sm text-text-dim">
+                  Show warm-up option on talk page
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ enableWarmups: !settings.enableWarmups })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.enableWarmups ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableWarmups ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {settings.enableWarmups && (
+              <>
+                {/* Duration */}
+                <div className="pl-4 border-l-2 border-surface-light">
+                  <label className="block text-sm text-text-dim mb-2">Duration</label>
+                  <div className="flex gap-2">
+                    {(["short", "medium", "long"] as const).map((dur) => (
+                      <button
+                        key={dur}
+                        onClick={() => settings.updateSettings({ warmupDuration: dur })}
+                        className={`
+                          flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors
+                          ${settings.warmupDuration === dur
+                            ? "bg-accent text-bg"
+                            : "bg-surface-light text-text"
+                          }
+                        `}
+                      >
+                        {dur === "short" ? "1 min" : dur === "medium" ? "2 min" : "3 min"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Auto-Prompt */}
+                <div className="flex items-center justify-between pl-4 border-l-2 border-surface-light">
+                  <div>
+                    <div className="font-medium text-sm">Auto-Prompt</div>
+                    <div className="text-xs text-text-dim">
+                      Suggest warm-up before each rehearsal
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => settings.updateSettings({ warmupAutoPrompt: !settings.warmupAutoPrompt })}
+                    className={`
+                      w-12 h-6 rounded-full transition-colors relative
+                      ${settings.warmupAutoPrompt ? "bg-accent" : "bg-surface-light"}
+                    `}
+                  >
+                    <div
+                      className={`
+                        absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all
+                        ${settings.warmupAutoPrompt ? "left-6" : "left-0.5"}
+                      `}
+                    />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+
         {/* Practice Granularity */}
         <Card>
           <h3 className="font-bold mb-4">Practice Granularity</h3>

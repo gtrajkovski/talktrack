@@ -497,6 +497,70 @@ export function coachStart(): void {
   }
 }
 
+/**
+ * Exercise start - warm rising two-note for warm-up exercises
+ * F4 (349Hz) → A4 (440Hz) - anticipation feeling
+ */
+export function exerciseStart(): void {
+  if (!shouldPlay()) return;
+  playTone(349, 0.12, 'triangle', 0.4);
+  setTimeout(() => playTone(440, 0.15, 'triangle', 0.5), 100);
+}
+
+/**
+ * Breathing tone - sustained soft sine for breath sync
+ * Returns stop function to allow caller to end the tone
+ * @param frequency - Hz (default 220 = A3, calming low tone)
+ */
+export function breathingTone(frequency: number = 220): () => void {
+  if (!shouldPlay()) {
+    return () => {};
+  }
+
+  try {
+    const ctx = getContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = frequency;
+
+    // Very soft, ambient volume
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.08 * globalVolume, ctx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    // Return stop function
+    return () => {
+      try {
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.stop(now + 0.35);
+      } catch {
+        // Ignore errors when stopping
+      }
+    };
+  } catch (e) {
+    console.warn('Earcon playback failed:', e);
+    return () => {};
+  }
+}
+
+/**
+ * Exercise complete - light celebration arpeggio
+ * G4 (392Hz) → B4 (494Hz) → D5 (587Hz)
+ */
+export function exerciseComplete(): void {
+  if (!shouldPlay()) return;
+  playTone(392, 0.1, 'triangle', 0.4);
+  setTimeout(() => playTone(494, 0.1, 'triangle', 0.4), 80);
+  setTimeout(() => playTone(587, 0.15, 'triangle', 0.5), 160);
+}
+
 // ============================================================================
 // CONVENIENCE EXPORT
 // ============================================================================
@@ -536,6 +600,9 @@ export const earcons = {
   onPace,
   bargeIn,
   coachStart,
+  exerciseStart,
+  breathingTone,
+  exerciseComplete,
 };
 
 export default earcons;

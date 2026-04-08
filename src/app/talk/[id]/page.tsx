@@ -111,6 +111,36 @@ export default function TalkDetailPage() {
           </Card>
         )}
 
+        {/* Warm-Up Card */}
+        <Card className="border-2 border-accent/20">
+          <Link href={`/talk/${talk.id}/warmup`}>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">
+                <span className="text-2xl">🎯</span>
+              </div>
+              <div className="flex-1">
+                <div className="font-bold text-accent">Warm Up</div>
+                <div className="text-sm text-text-dim">
+                  2-min voice exercises before rehearsal
+                </div>
+              </div>
+              <svg
+                className="w-5 h-5 text-accent"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
+          </Link>
+        </Card>
+
         {/* Mode Selection */}
         <div>
           <h2 className="text-lg font-bold mb-3">Start Rehearsal</h2>

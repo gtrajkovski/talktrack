@@ -1,6 +1,7 @@
 import type { CommandLanguage } from "@/lib/i18n/voiceCommands";
 import type { Granularity } from "@/lib/utils/chunker";
 import type { Locale } from "@/i18n/config";
+import type { WarmupDuration } from "@/types/warmup";
 
 export interface UserSettings {
   // UI Language (i18n)
@@ -47,6 +48,10 @@ export interface UserSettings {
   preferredMicGroupId: string;    // For fuzzy matching
   preferredSpeakerLabel: string;
   preferredSpeakerGroupId: string;
+  // Warm-up settings
+  enableWarmups: boolean;         // Master toggle for warm-up feature
+  warmupDuration: WarmupDuration; // 'short' | 'medium' | 'long'
+  warmupAutoPrompt: boolean;      // Prompt to warm up before rehearsal
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -93,4 +98,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   preferredMicGroupId: '',
   preferredSpeakerLabel: '',
   preferredSpeakerGroupId: '',
+  // Warm-up defaults
+  enableWarmups: true,
+  warmupDuration: 'medium',
+  warmupAutoPrompt: false,
 };
