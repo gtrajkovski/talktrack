@@ -822,6 +822,7 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     // Update timestamp and store
     lastCommandTimeRef.current = now;
     setLastCommand(command);
+    useSettingsStore.getState().incrementCommand(command);
     earcons.commandRecognized();
 
     // Try handlers in order of specificity
