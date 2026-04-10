@@ -8,6 +8,11 @@ interface SettingsState extends UserSettings {
   setHasHydrated: (state: boolean) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   resetSettings: () => void;
+  // Voice intelligence tracking
+  incrementCommand: (command: string) => void;
+  incrementSessionCount: () => void;
+  getCommandUsageCount: (command: string) => number;
+  hasLearnedCommand: (command: string, threshold?: number) => boolean;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -26,6 +31,32 @@ export const useSettingsStore = create<SettingsState>()(
 
       resetSettings: () => {
         set(DEFAULT_SETTINGS);
+      },
+
+      incrementCommand: (command: string) => {
+        set((state) => ({
+          commandsLearned: {
+            ...state.commandsLearned,
+            [command]: (state.commandsLearned[command] || 0) + 1,
+          },
+        }));
+      },
+
+      incrementSessionCount: () => {
+        set((state) => ({
+          totalSessionsEver: state.totalSessionsEver + 1,
+        }));
+      },
+
+      getCommandUsageCount: (command: string): number => {
+        // Access state through the getter to avoid circular reference
+        const state = useSettingsStore.getState();
+        return state.commandsLearned[command] || 0;
+      },
+
+      hasLearnedCommand: (command: string, threshold = 3): boolean => {
+        const state = useSettingsStore.getState();
+        return (state.commandsLearned[command] || 0) >= threshold;
       },
     }),
     {

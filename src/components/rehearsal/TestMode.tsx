@@ -16,6 +16,8 @@ import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
+import { generateContextualHelp, type AssistantContext } from "@/lib/speech/voiceAssistant";
+import { countDueSlides } from "@/lib/scoring/spacedRepetition";
 import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
@@ -144,6 +146,7 @@ export function TestMode({
   const handleBackRef = useRef<() => void>(() => {});
   const handleRepeatRef = useRef<() => void>(() => {});
   const handleHelpRef = useRef<() => void>(() => {});
+  const handleRevealRef = useRef<() => void>(() => {});
   const handleStopRef = useRef<() => void>(() => {});
   const handleResumeRef = useRef<() => void>(() => {});
   const handleInterruptRef = useRef<(cmd: string) => void>(() => {});
@@ -221,6 +224,7 @@ export function TestMode({
               case "back": handleBackRef.current(); break;
               case "repeat": handleRepeatRef.current(); break;
               case "help": handleHelpRef.current(); break;
+              case "reveal": handleRevealRef.current(); break;
               case "stop": handleStopRef.current(); break;
               case "resume": handleResumeRef.current(); break;
             }
@@ -332,9 +336,47 @@ export function TestMode({
     });
   }, [currentIndex, currentSlide.title, granularity, currentChunkInSlide, chunksInCurrentSlide, speechRate, voiceName, useVoiceBoxClone, voiceBoxCloneUrl, voiceBoxCloneVoiceId, useElevenLabs, elevenLabsApiKey, elevenLabsVoiceId, startListening, stopListening, setAudioState, clearTranscript, commandLanguage]);
 
+  // Context-aware help - gives suggestions based on mode/state
   const handleHelp = useCallback(() => {
     stopListening();
-    earcons.micOff(); // Audio feedback that mic is off for TTS
+    setStatus("playing");
+    setAudioState("speaking");
+    earcons.infoQuery();
+
+    // Build context for contextual help
+    const context: AssistantContext = {
+      mode: "test",
+      currentSlideIndex: currentIndex,
+      totalSlides: slides.length,
+      currentSlide,
+      currentAttempt: undefined,
+      session: undefined,
+      commandsLearned: useSettingsStore.getState().commandsLearned,
+      totalSessionsEver: useSettingsStore.getState().totalSessionsEver,
+      isPaused: false,
+      isListening: true,
+      hasTargetDuration: false,
+      dueSlideCount: countDueSlides(slides),
+      elapsedSeconds: 0,
+    };
+
+    const helpText = generateContextualHelp(context);
+    voicebox.play(helpText + " What would you like to do?", {
+      rate: speechRate,
+      voiceName: voiceName || undefined,
+      onInterrupt: (cmd) => handleInterruptRef.current(cmd),
+      commandLanguage,
+      onEnd: () => {
+        setAudioState("idle");
+        startListening();
+      },
+    });
+  }, [currentIndex, slides, currentSlide, speechRate, voiceName, startListening, stopListening, setAudioState, commandLanguage]);
+
+  // Reveal notes - shows the actual answer
+  const handleReveal = useCallback(() => {
+    stopListening();
+    earcons.micOff();
     setHelpUsed(true);
     onUsedHelp();
     setStatus("playing");
@@ -351,7 +393,6 @@ export function TestMode({
         apiKey: elevenLabsApiKey,
         voiceId: elevenLabsVoiceId,
       } : undefined,
-      // Barge-in: allow interrupting TTS with voice commands
       onInterrupt: (cmd) => handleInterruptRef.current(cmd),
       commandLanguage,
       onEnd: () => {
@@ -453,6 +494,7 @@ export function TestMode({
     handleBackRef.current = handleBack;
     handleRepeatRef.current = handleRepeat;
     handleHelpRef.current = handleHelp;
+    handleRevealRef.current = handleReveal;
     handleStopRef.current = handleStop;
     handleResumeRef.current = handleResume;
     handleInterruptRef.current = handleInterrupt;
@@ -539,7 +581,7 @@ export function TestMode({
           </div>
         ) : (
           <div className="text-center">
-            <Button onClick={handleHelp} variant="secondary" className="text-sm">Need Help</Button>
+            <Button onClick={handleReveal} variant="secondary" className="text-sm">Reveal Answer</Button>
           </div>
         )}
         {transcript && helpUsed && <TranscriptScore transcript={transcript} originalNotes={currentSlide.notes} showScore={true} />}

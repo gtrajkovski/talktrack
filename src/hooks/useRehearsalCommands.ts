@@ -12,6 +12,7 @@ import {
 import {
   generateCommandList,
   generateWhatsNext,
+  generateContextualHelp,
   type AssistantContext,
 } from "@/lib/speech/voiceAssistant";
 import { getMissedContentWords } from "@/lib/scoring/similarity";
@@ -615,6 +616,37 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
     return false;
   }, [talk, currentSlideIndex, onGoToSlide, getSectionsFromSlides, speakInfoWithFeedback]);
 
+  // Build assistant context for contextual help
+  const buildAssistantContext = useCallback((): AssistantContext => {
+    const slides = talk?.slides || [];
+    const dueCount = countDueSlides(slides);
+    const elapsedSeconds = session ? Math.floor((Date.now() - session.startedAt) / 1000) : 0;
+
+    return {
+      mode,
+      currentSlideIndex,
+      totalSlides,
+      currentSlide: slides[currentSlideIndex],
+      currentAttempt: currentAttempt || undefined,
+      session: session || undefined,
+      commandsLearned: useSettingsStore.getState().commandsLearned,
+      totalSessionsEver: useSettingsStore.getState().totalSessionsEver,
+      isPaused: false, // Would need to be passed from caller
+      isListening: true,
+      hasTargetDuration: !!talk?.targetDurationMinutes,
+      dueSlideCount: dueCount,
+      elapsedSeconds,
+    };
+  }, [mode, currentSlideIndex, totalSlides, talk, currentAttempt, session]);
+
+  // Handle contextual help command
+  const handleContextualHelpCommand = useCallback((): boolean => {
+    const context = buildAssistantContext();
+    const helpText = generateContextualHelp(context);
+    speakInfoWithFeedback(helpText + " What would you like to do?");
+    return true;
+  }, [buildAssistantContext, speakInfoWithFeedback]);
+
   // Handle voice intelligence commands (Prompt 11)
   const handleVoiceIntelligenceCommand = useCallback((command: string, transcript: string): boolean => {
     switch (command) {
@@ -750,11 +782,9 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
         }
         break;
       case "help":
-        if (handlers.onHelp) {
-          handlers.onHelp();
-          return true;
-        }
-        break;
+        // Context-aware help - gives suggestions based on mode/state
+        handleContextualHelpCommand();
+        return true;
       case "stop":
         handlers.onStop();
         return true;
@@ -775,7 +805,7 @@ export function useRehearsalCommands(options: RehearsalCommandOptions) {
         break;
     }
     return false;
-  }, [handlers]);
+  }, [handlers, handleContextualHelpCommand]);
 
   /**
    * Check if transcript contains a command and execute it.
