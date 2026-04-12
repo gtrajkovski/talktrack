@@ -10,6 +10,7 @@ import { SectionSelector } from "@/components/talk";
 import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
 import { getSections, hasMultipleSections } from "@/lib/utils/sections";
+import { downloadTalkJson } from "@/lib/utils/talkExport";
 
 const modes = [
   {
@@ -213,7 +214,7 @@ export default function TalkDetailPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <Link href={`/talk/${talk.id}/slides`}>
             <Button variant="secondary">Slides</Button>
           </Link>
@@ -221,8 +222,11 @@ export default function TalkDetailPage() {
             <Button variant="secondary">Stats</Button>
           </Link>
           <Link href={`/talk/${talk.id}/recordings`}>
-            <Button variant="secondary">🎙️ Recordings</Button>
+            <Button variant="secondary">🎙️</Button>
           </Link>
+          <Button variant="secondary" onClick={() => downloadTalkJson(talk)}>
+            Export
+          </Button>
         </div>
       </div>
     </AppShell>

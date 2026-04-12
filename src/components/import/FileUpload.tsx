@@ -8,15 +8,17 @@ import { Card } from "@/components/ui/Card";
 import { useTalksStore } from "@/stores/talksStore";
 import { parsePptx } from "@/lib/parsers/pptx";
 import { parseDocx } from "@/lib/parsers/docx";
+import { validateImport, prepareTalkForImport, readFileAsText } from "@/lib/utils/talkExport";
 import type { Talk } from "@/types/talk";
 
-type FileType = "pptx" | "docx" | "pdf" | "unknown";
+type FileType = "pptx" | "docx" | "pdf" | "json" | "unknown";
 
 function detectFileType(file: File): FileType {
   const name = file.name.toLowerCase();
   if (name.endsWith(".pptx")) return "pptx";
   if (name.endsWith(".docx")) return "docx";
   if (name.endsWith(".pdf") || file.type === "application/pdf") return "pdf";
+  if (name.endsWith(".json") || name.endsWith(".talktrack.json")) return "json";
   return "unknown";
 }
 
@@ -41,37 +43,49 @@ export function FileUpload() {
       const fileType = detectFileType(file);
 
       if (fileType === "unknown") {
-        throw new Error("Unsupported file type. Please use .pptx, .docx, or .pdf files.");
+        throw new Error("Unsupported file type. Please use .pptx, .docx, .pdf, or .json files.");
       }
 
-      let result;
+      let talk: Talk;
 
-      if (fileType === "pdf") {
-        const { parsePdf } = await import("@/lib/parsers/pdf");
-        result = await parsePdf(file);
-      } else {
-        const buffer = await file.arrayBuffer();
-        if (fileType === "pptx") {
-          result = await parsePptx(buffer);
-        } else {
-          result = await parseDocx(buffer);
+      if (fileType === "json") {
+        // Handle TalkTrack JSON import
+        const text = await readFileAsText(file);
+        const data = validateImport(text);
+        if (!data) {
+          throw new Error("Invalid TalkTrack export file.");
         }
-      }
+        talk = prepareTalkForImport(data);
+      } else {
+        let result;
 
-      if (result.slides.length === 0) {
-        throw new Error("No content found in the file.");
-      }
+        if (fileType === "pdf") {
+          const { parsePdf } = await import("@/lib/parsers/pdf");
+          result = await parsePdf(file);
+        } else {
+          const buffer = await file.arrayBuffer();
+          if (fileType === "pptx") {
+            result = await parsePptx(buffer);
+          } else {
+            result = await parseDocx(buffer);
+          }
+        }
 
-      const now = Date.now();
-      const talk: Talk = {
-        id: nanoid(),
-        title: result.title,
-        slides: result.slides,
-        createdAt: now,
-        updatedAt: now,
-        totalRehearsals: 0,
-        source: fileType,
-      };
+        if (result.slides.length === 0) {
+          throw new Error("No content found in the file.");
+        }
+
+        const now = Date.now();
+        talk = {
+          id: nanoid(),
+          title: result.title,
+          slides: result.slides,
+          createdAt: now,
+          updatedAt: now,
+          totalRehearsals: 0,
+          source: fileType,
+        };
+      }
 
       await addTalk(talk);
       router.push("/");

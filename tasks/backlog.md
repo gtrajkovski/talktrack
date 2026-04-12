@@ -54,7 +54,7 @@ The VoiceBox local API integration (localhost:17493) was originally planned as a
 | Audience simulation | ✅ Complete |
 | Conference Day companion | ✅ Complete |
 | Team/coach sharing | Not started |
-| Multi-device sync | Not started |
+| Multi-device sync | ✅ Complete |
 | Presentation structure feedback | ✅ Complete |
 
 ---
