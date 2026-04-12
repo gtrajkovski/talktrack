@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
 import { generateFullCsv, downloadCsv } from "@/lib/utils/exportCsv";
+import { generateShareReport, shareReport } from "@/lib/utils/shareReport";
 import { getSessionsByTalk } from "@/lib/db/sessions";
 import { ProgressHeatmap, StructureAnalysis } from "@/components/stats";
 import type { RehearsalSession } from "@/types/session";
@@ -41,6 +42,18 @@ export default function StatsPage() {
     downloadCsv(csv, filename);
   }, [talk, sessions]);
 
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+
+  const handleShare = useCallback(async () => {
+    if (!talk) return;
+    const report = generateShareReport(talk);
+    const usedNativeShare = await shareReport(report);
+    if (!usedNativeShare) {
+      setShareStatus("Copied to clipboard!");
+      setTimeout(() => setShareStatus(null), 2000);
+    }
+  }, [talk]);
+
   if (!talk) {
     return (
       <AppShell>
@@ -60,27 +73,22 @@ export default function StatsPage() {
       <Header title="Statistics" backHref={`/talk/${params.id}`} />
 
       <div className="px-4 py-4 space-y-4">
-        {/* Export Button */}
-        <div className="flex justify-end">
+        {/* Export/Share Buttons */}
+        <div className="flex justify-end gap-2">
+          <Button
+            onClick={handleShare}
+            variant="secondary"
+            fullWidth={false}
+            className="px-4"
+          >
+            {shareStatus || "Share"}
+          </Button>
           <Button
             onClick={handleExport}
             variant="secondary"
             fullWidth={false}
             className="px-4"
           >
-            <svg
-              className="w-4 h-4 mr-2 inline-block"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
             Export CSV
           </Button>
         </div>
