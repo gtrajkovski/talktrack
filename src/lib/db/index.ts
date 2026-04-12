@@ -3,6 +3,7 @@ import type { Talk } from "@/types/talk";
 import type { RehearsalSession } from "@/types/session";
 import type { UserSettings } from "@/types/settings";
 import type { Recording } from "@/types/recording";
+import type { ConferenceEvent } from "@/types/conferenceDay";
 
 // Hint state for progressive command disclosure
 export interface HintState {
@@ -61,10 +62,15 @@ interface TalkTrackDB extends DBSchema {
     value: StoredBookmark;
     indexes: { "by-talk": string };
   };
+  conferenceEvents: {
+    key: string;
+    value: ConferenceEvent;
+    indexes: { "by-talk": string; "by-scheduled": number };
+  };
 }
 
 const DB_NAME = "talktrack";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbPromise: Promise<IDBPDatabase<TalkTrackDB>> | null = null;
 
@@ -114,6 +120,15 @@ export function getDB(): Promise<IDBPDatabase<TalkTrackDB>> {
             keyPath: ["talkId", "slideId"],
           });
           bookmarkStore.createIndex("by-talk", "talkId");
+        }
+
+        // Conference events store (added in v5) - for Conference Day companion
+        if (oldVersion < 5 && !db.objectStoreNames.contains("conferenceEvents")) {
+          const eventStore = db.createObjectStore("conferenceEvents", {
+            keyPath: "id",
+          });
+          eventStore.createIndex("by-talk", "talkId");
+          eventStore.createIndex("by-scheduled", "scheduledAt");
         }
       },
     });
