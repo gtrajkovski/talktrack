@@ -9,7 +9,7 @@ import { useTalksStore } from "@/stores/talksStore";
 import { formatDuration } from "@/lib/utils/formatDuration";
 import { generateFullCsv, downloadCsv } from "@/lib/utils/exportCsv";
 import { getSessionsByTalk } from "@/lib/db/sessions";
-import { ProgressHeatmap } from "@/components/stats";
+import { ProgressHeatmap, StructureAnalysis } from "@/components/stats";
 import type { RehearsalSession } from "@/types/session";
 
 export default function StatsPage() {
@@ -107,6 +107,9 @@ export default function StatsPage() {
             </div>
           </div>
         </Card>
+
+        {/* Structure Analysis */}
+        <StructureAnalysis talk={talk} />
 
         {/* Progress Heatmap */}
         <Card>
