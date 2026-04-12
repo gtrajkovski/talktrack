@@ -1,38 +1,6 @@
 // src/app/api/coach/route.ts
+// BYOK-only: Users must provide their own API key
 import { NextRequest, NextResponse } from 'next/server';
-
-// Rate limiting: simple in-memory counter per IP
-// Resets every hour. Max 20 free requests per IP per hour.
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const FREE_RATE_LIMIT = 20;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-
-  if (entry.count >= FREE_RATE_LIMIT) {
-    return false;
-  }
-
-  entry.count++;
-  return true;
-}
-
-// Clean up old entries periodically (runs on module load)
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, val] of rateLimitMap.entries()) {
-      if (now > val.resetAt) rateLimitMap.delete(key);
-    }
-  }, 5 * 60 * 1000);
-}
 
 interface SlideSummary {
   title: string;
@@ -53,9 +21,9 @@ interface CoachRequest {
   totalSlides: number;
   targetDurationMinutes?: number;
 
-  // Provider config
-  provider: 'free' | 'anthropic' | 'openai' | 'google';
-  apiKey?: string;       // BYOK key
+  // Provider config (BYOK only)
+  provider: 'anthropic' | 'openai' | 'google';
+  apiKey: string;        // Required BYOK key
   model?: string;        // Custom model override
 }
 
@@ -115,39 +83,7 @@ function buildUserPrompt(data: CoachRequest): string {
   return parts.join('\n');
 }
 
-async function callGeminiFree(userPrompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured on server');
-  }
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: `${SYSTEM_PROMPT}\n\n${userPrompt}` }] }
-        ],
-        generationConfig: {
-          maxOutputTokens: 200,
-          temperature: 0.7,
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error ${response.status}: ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'No feedback generated.';
-}
-
-async function callGeminiByok(userPrompt: string, apiKey: string, model?: string): Promise<string> {
+async function callGemini(userPrompt: string, apiKey: string, model?: string): Promise<string> {
   const modelName = model || 'gemini-2.0-flash';
 
   const response = await fetch(
@@ -246,36 +182,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // BYOK required
+    if (!body.apiKey) {
+      return NextResponse.json(
+        { error: 'API key required. Add your API key in Settings to use AI Coach.' },
+        { status: 400 }
+      );
+    }
+
     const userPrompt = buildUserPrompt(body);
     let feedback: string;
 
-    if (body.provider === 'free' || !body.apiKey) {
-      // Free tier — rate limit by IP
-      const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-        || request.headers.get('x-real-ip')
-        || 'unknown';
-
-      if (!checkRateLimit(ip)) {
-        return NextResponse.json(
-          { error: 'Rate limit exceeded. Try again in an hour, or add your own API key in Settings.' },
-          { status: 429 }
-        );
-      }
-
-      feedback = await callGeminiFree(userPrompt);
-
-    } else if (body.provider === 'anthropic' && body.apiKey) {
+    if (body.provider === 'anthropic') {
       feedback = await callAnthropic(userPrompt, body.apiKey, body.model ?? undefined);
-
-    } else if (body.provider === 'openai' && body.apiKey) {
+    } else if (body.provider === 'openai') {
       feedback = await callOpenAI(userPrompt, body.apiKey, body.model ?? undefined);
-
-    } else if (body.provider === 'google' && body.apiKey) {
-      feedback = await callGeminiByok(userPrompt, body.apiKey, body.model ?? undefined);
-
+    } else if (body.provider === 'google') {
+      feedback = await callGemini(userPrompt, body.apiKey, body.model ?? undefined);
     } else {
       return NextResponse.json(
-        { error: 'Invalid provider or missing API key' },
+        { error: 'Invalid provider. Use anthropic, openai, or google.' },
         { status: 400 }
       );
     }

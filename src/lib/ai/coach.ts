@@ -27,8 +27,8 @@ interface CoachRequestBody {
   sessionDurationSeconds: number;
   totalSlides: number;
   targetDurationMinutes?: number;
-  provider: "free" | "anthropic" | "openai" | "google";
-  apiKey?: string;
+  provider: "anthropic" | "openai" | "google";
+  apiKey: string;
   model?: string;
 }
 
@@ -37,10 +37,10 @@ export async function generateCoachingFeedback(
   talk: Talk,
   elapsedSeconds: number,
   options: {
-    provider?: "free" | "anthropic" | "openai" | "google";
-    apiKey?: string;
+    provider: "anthropic" | "openai" | "google";
+    apiKey: string;
     model?: string;
-  } = {}
+  }
 ): Promise<CoachingFeedback> {
   // Build slide summaries from attempts
   const slideSummaries = session.attempts.map((attempt) => {
@@ -81,7 +81,7 @@ export async function generateCoachingFeedback(
     sessionDurationSeconds: elapsedSeconds,
     totalSlides: talk.slides.length,
     targetDurationMinutes: talk.targetDurationMinutes,
-    provider: options.provider || "free",
+    provider: options.provider,
     apiKey: options.apiKey,
     model: options.model,
   };

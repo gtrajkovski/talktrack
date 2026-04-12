@@ -227,13 +227,13 @@ export function CompletionScreen({
     // Only for prompt/test modes (not listen mode which has no attempts)
     if (mode === "listen") return;
 
-    // For BYOK providers, require an API key
-    if (aiProvider !== "free" && !aiApiKey) return;
+    // BYOK only - require both provider and API key
+    if (!aiProvider || !aiApiKey) return;
 
     setIsLoadingCoach(true);
     generateCoachingFeedback(session, talk, elapsedSeconds, {
       provider: aiProvider,
-      apiKey: aiApiKey || undefined,
+      apiKey: aiApiKey,
     })
       .then((feedback) => {
         if (isMountedRef.current) {

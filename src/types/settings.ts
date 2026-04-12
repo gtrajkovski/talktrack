@@ -38,11 +38,11 @@ export interface UserSettings {
   // Voice intelligence tracking
   commandsLearned: Record<string, number>; // command -> usage count
   totalSessionsEver: number;
-  // AI Coach settings
-  aiProvider: 'free' | 'anthropic' | 'openai' | 'google';
-  aiApiKey: string | null;        // BYOK key (null = use free tier)
+  // AI Coach settings (BYOK only - user must provide their own API key)
+  aiProvider: 'anthropic' | 'openai' | 'google' | null;
+  aiApiKey: string | null;        // Required BYOK key
   aiModel: string | null;         // Custom model override (null = use default)
-  enableAiCoach: boolean;         // Master toggle (default: true)
+  enableAiCoach: boolean;         // Master toggle
   // Audio device settings (Phase 1B)
   preferredMicLabel: string;      // Device label (not ID - IDs rotate for privacy)
   preferredMicGroupId: string;    // For fuzzy matching
@@ -91,11 +91,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
   // Voice intelligence defaults
   commandsLearned: {},
   totalSessionsEver: 0,
-  // AI Coach defaults
-  aiProvider: 'free',
+  // AI Coach defaults (BYOK only - disabled until user adds API key)
+  aiProvider: null,
   aiApiKey: null,
   aiModel: null,
-  enableAiCoach: true,
+  enableAiCoach: false,
   // Audio device defaults
   preferredMicLabel: '',
   preferredMicGroupId: '',

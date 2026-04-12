@@ -499,19 +499,19 @@ export default function SettingsPage() {
                 <div>
                   <label className="block text-sm text-text-dim mb-1">AI Provider</label>
                   <select
-                    value={settings.aiProvider}
-                    onChange={(e) => settings.updateSettings({ aiProvider: e.target.value as 'free' | 'anthropic' | 'openai' | 'google' })}
+                    value={settings.aiProvider ?? ''}
+                    onChange={(e) => settings.updateSettings({ aiProvider: e.target.value as 'anthropic' | 'openai' | 'google' | null || null })}
                     className="w-full bg-surface-light text-text border border-surface-light rounded-xl px-4 py-3"
                   >
-                    <option value="free">Free (Gemini Flash — no key needed)</option>
-                    <option value="google">Google Gemini (your own key)</option>
-                    <option value="anthropic">Anthropic Claude (your own key)</option>
-                    <option value="openai">OpenAI GPT (your own key)</option>
+                    <option value="">Select a provider...</option>
+                    <option value="google">Google Gemini</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                    <option value="openai">OpenAI GPT</option>
                   </select>
                 </div>
 
-                {/* API key input — only show for BYOK providers */}
-                {settings.aiProvider !== 'free' && (
+                {/* API key input — required for all providers */}
+                {settings.aiProvider && (
                   <div>
                     <label className="block text-sm text-text-dim mb-1">
                       API Key
@@ -528,13 +528,16 @@ export default function SettingsPage() {
                       className="w-full bg-surface-light text-text border border-surface-light rounded-xl px-4 py-3 font-mono text-sm"
                     />
                     <p className="text-xs text-text-dim mt-1">
-                      Your key is stored only on this device.
+                      Your key is stored only on this device. Get a key from{' '}
+                      {settings.aiProvider === 'anthropic' && <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">console.anthropic.com</a>}
+                      {settings.aiProvider === 'openai' && <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">platform.openai.com</a>}
+                      {settings.aiProvider === 'google' && <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">aistudio.google.com</a>}
                     </p>
                   </div>
                 )}
 
                 {/* Model override — advanced, collapsed by default */}
-                {settings.aiProvider !== 'free' && (
+                {settings.aiProvider && (
                   <details className="text-sm">
                     <summary className="text-text-dim cursor-pointer">Advanced: Custom model</summary>
                     <input
@@ -551,9 +554,9 @@ export default function SettingsPage() {
                   </details>
                 )}
 
-                {settings.aiProvider === 'free' && (
+                {!settings.aiProvider && (
                   <p className="text-xs text-text-dim bg-surface-light p-3 rounded-xl">
-                    Free coaching uses Google Gemini Flash. Limited to ~20 sessions per hour. For unlimited coaching, add your own API key above.
+                    Select a provider and add your API key to enable AI coaching feedback after rehearsal sessions.
                   </p>
                 )}
               </>
