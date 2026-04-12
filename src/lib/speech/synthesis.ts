@@ -11,6 +11,26 @@ let _onEndCallback: SpeechCallback | null = null;
 let usingElevenLabs = false;
 let usingVoiceBoxClone = false;
 
+// Cache the default voice for consistency across utterances
+let cachedDefaultVoice: SpeechSynthesisVoice | null = null;
+
+/**
+ * Get a consistent default voice. Caches the result for session consistency.
+ */
+function getDefaultVoice(): SpeechSynthesisVoice | null {
+  if (cachedDefaultVoice) return cachedDefaultVoice;
+
+  const voices = speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+
+  // Prefer English voices, then the first available
+  const englishVoice = voices.find(v => v.lang.startsWith("en") && v.localService);
+  const anyEnglish = voices.find(v => v.lang.startsWith("en"));
+  cachedDefaultVoice = englishVoice || anyEnglish || voices[0];
+
+  return cachedDefaultVoice;
+}
+
 // Volume control (0-1, default 1.0)
 let currentVolume = 1.0;
 let isMuted = false;
@@ -260,10 +280,14 @@ function webSpeechSpeak(
     utterance.rate = rate;
     utterance.volume = volume;
 
+    // Set voice: use specified voice, or fall back to cached default for consistency
+    const voices = speechSynthesis.getVoices();
     if (voiceName) {
-      const voices = speechSynthesis.getVoices();
       const voice = voices.find((v) => v.name === voiceName);
       if (voice) utterance.voice = voice;
+    } else {
+      const defaultVoice = getDefaultVoice();
+      if (defaultVoice) utterance.voice = defaultVoice;
     }
 
     utterance.onend = () => {

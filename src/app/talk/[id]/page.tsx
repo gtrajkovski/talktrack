@@ -183,12 +183,15 @@ export default function TalkDetailPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="flex gap-3">
-          <Link href={`/talk/${talk.id}/slides`} className="flex-1">
-            <Button variant="secondary">View Slides</Button>
+        <div className="grid grid-cols-3 gap-3">
+          <Link href={`/talk/${talk.id}/slides`}>
+            <Button variant="secondary">Slides</Button>
           </Link>
-          <Link href={`/talk/${talk.id}/stats`} className="flex-1">
+          <Link href={`/talk/${talk.id}/stats`}>
             <Button variant="secondary">Stats</Button>
+          </Link>
+          <Link href={`/talk/${talk.id}/recordings`}>
+            <Button variant="secondary">🎙️ Recordings</Button>
           </Link>
         </div>
       </div>

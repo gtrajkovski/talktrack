@@ -399,6 +399,29 @@ export function ListenMode({
         // Already stopped TTS, just resume
         handleResumeRef.current();
         break;
+      case "repeat":
+        handleRepeatRef.current();
+        break;
+      case "bookmark": {
+        const state = useRehearsalStore.getState();
+        const slideId = state.talk?.slides[state.currentSlideIndex]?.id;
+        if (slideId) {
+          const wasAdded = state.toggleBookmark(slideId);
+          if (wasAdded) earcons.bookmarkAdded(); else earcons.bookmarkRemoved();
+        }
+        speakContentRef.current();
+        break;
+      }
+      case "faster":
+        useRehearsalStore.getState().increaseSpeed();
+        earcons.speedUp();
+        speakContentRef.current();
+        break;
+      case "slower":
+        useRehearsalStore.getState().decreaseSpeed();
+        earcons.speedDown();
+        speakContentRef.current();
+        break;
     }
   }, [setLastCommand]);
 

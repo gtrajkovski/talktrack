@@ -12,6 +12,7 @@ import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import { PlaybackIndicator } from "./PlaybackIndicator";
 import * as earcons from "@/lib/audio/earcons";
+import * as audienceSimulation from "@/lib/audio/audienceSimulation";
 import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio/recorder";
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
@@ -64,6 +65,8 @@ export function TestMode({
     useVoiceBoxClone,
     voiceBoxCloneUrl,
     voiceBoxCloneVoiceId,
+    enableAudienceSimulation,
+    audienceVolume,
   } = useSettingsStore();
   const { setAudioState, setLastCommand, setTranscript: setStoreTranscript, clearTranscript } = useRehearsalStore();
   const canRecord = isRecordingSupported();
@@ -485,6 +488,35 @@ export function TestMode({
       case "resume":
         handleResumeRef.current();
         break;
+      case "repeat":
+        handleRepeatRef.current();
+        break;
+      case "help":
+        handleHelpRef.current();
+        break;
+      case "reveal":
+        handleRevealRef.current();
+        break;
+      case "bookmark": {
+        const state = useRehearsalStore.getState();
+        const slideId = state.talk?.slides[state.currentSlideIndex]?.id;
+        if (slideId) {
+          const wasAdded = state.toggleBookmark(slideId);
+          if (wasAdded) earcons.bookmarkAdded(); else earcons.bookmarkRemoved();
+        }
+        startListeningRef.current();
+        break;
+      }
+      case "faster":
+        useRehearsalStore.getState().increaseSpeed();
+        earcons.speedUp();
+        startListeningRef.current();
+        break;
+      case "slower":
+        useRehearsalStore.getState().decreaseSpeed();
+        earcons.speedDown();
+        startListeningRef.current();
+        break;
     }
   }, [setLastCommand]);
 
@@ -507,6 +539,17 @@ export function TestMode({
       isMountedRef.current = false;
     };
   }, []);
+
+  // Audience simulation - ambient crowd sounds
+  useEffect(() => {
+    if (enableAudienceSimulation) {
+      audienceSimulation.setVolume(audienceVolume);
+      audienceSimulation.start();
+    }
+    return () => {
+      audienceSimulation.stop();
+    };
+  }, [enableAudienceSimulation, audienceVolume]);
 
   // Initial prompt speak on slide change
   useEffect(() => {

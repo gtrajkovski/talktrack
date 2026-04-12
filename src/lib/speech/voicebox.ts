@@ -258,8 +258,11 @@ export function play(
   }
 
   // Start barge-in recognition if supported and callback provided
+  console.log("[voicebox] onInterrupt provided:", !!onInterrupt, "canBargeIn:", bargeIn.canBargeIn());
   if (onInterrupt && bargeIn.canBargeIn()) {
     bargeIn.startBargeIn(text, commandLanguage, onInterrupt);
+  } else {
+    console.log("[voicebox] barge-in NOT started");
   }
 
   // Use synthesis module to speak

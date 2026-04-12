@@ -44,6 +44,21 @@ The VoiceBox local API integration (localhost:17493) was originally planned as a
 
 ---
 
+## Phase 7 Status
+
+| Feature | Status |
+|---------|--------|
+| Warm-up exercises | ✅ Complete |
+| Recording capture | ✅ Complete (saves to IndexedDB) |
+| Recording playback UI | ✅ Complete |
+| Audience simulation | ✅ Complete |
+| Conference Day companion | Not started |
+| Team/coach sharing | Not started |
+| Multi-device sync | Not started |
+| Presentation structure feedback | Not started |
+
+---
+
 ## Ideas / Parking Lot
 
 (Add ideas here as they come up)

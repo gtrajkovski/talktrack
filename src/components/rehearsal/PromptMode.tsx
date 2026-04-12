@@ -483,8 +483,38 @@ export function PromptMode({
       case "resume":
         handleResumeRef.current();
         break;
+      case "repeat":
+        handleRepeatRef.current();
+        break;
+      case "reveal":
+        handleRevealRef.current();
+        break;
+      case "help":
+        onUsedHelp();
+        handleRevealRef.current();
+        break;
+      case "bookmark": {
+        const state = useRehearsalStore.getState();
+        const slideId = state.talk?.slides[state.currentSlideIndex]?.id;
+        if (slideId) {
+          const wasAdded = state.toggleBookmark(slideId);
+          if (wasAdded) earcons.bookmarkAdded(); else earcons.bookmarkRemoved();
+        }
+        startListening();
+        break;
+      }
+      case "faster":
+        useRehearsalStore.getState().increaseSpeed();
+        earcons.speedUp();
+        startListening();
+        break;
+      case "slower":
+        useRehearsalStore.getState().decreaseSpeed();
+        earcons.speedDown();
+        startListening();
+        break;
     }
-  }, [setLastCommand]);
+  }, [setLastCommand, onUsedHelp, startListening]);
 
   // Update refs - use useEffect to satisfy linter (refs should be stable between renders)
   useEffect(() => {

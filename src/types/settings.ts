@@ -52,6 +52,9 @@ export interface UserSettings {
   enableWarmups: boolean;         // Master toggle for warm-up feature
   warmupDuration: WarmupDuration; // 'short' | 'medium' | 'long'
   warmupAutoPrompt: boolean;      // Prompt to warm up before rehearsal
+  // Audience simulation settings
+  enableAudienceSimulation: boolean;  // Play ambient crowd sounds during rehearsal
+  audienceVolume: number;             // 0-1, default 0.15
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -102,4 +105,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   enableWarmups: true,
   warmupDuration: 'medium',
   warmupAutoPrompt: false,
+  // Audience simulation defaults
+  enableAudienceSimulation: false,
+  audienceVolume: 0.15,
 };

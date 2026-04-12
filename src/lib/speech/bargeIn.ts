@@ -16,7 +16,11 @@ let isBargeInActive = false;
 let lastCommandTime = 0;
 
 // Commands that can interrupt TTS (short, unambiguous)
-const INTERRUPT_COMMAND_NAMES = ["stop", "next", "back", "resume"] as const;
+const INTERRUPT_COMMAND_NAMES = [
+  "stop", "next", "back", "resume",
+  "repeat", "reveal", "help", "bookmark",
+  "faster", "slower",
+] as const;
 type InterruptCommand = typeof INTERRUPT_COMMAND_NAMES[number];
 
 // Constants
@@ -172,12 +176,11 @@ export function startBargeIn(
       if (!lastResult) return;
 
       const transcript = lastResult[0].transcript;
-
-      // Only process final results for commands
-      if (!lastResult.isFinal) return;
+      console.log("[barge-in] heard:", transcript, lastResult.isFinal ? "(final)" : "(interim)");
 
       // Check for echo (mic picking up TTS audio)
       if (isEchoOfTTS(transcript)) {
+        console.log("[barge-in] rejected as echo");
         return;
       }
 
@@ -186,8 +189,11 @@ export function startBargeIn(
       if (now - lastCommandTime < COMMAND_DEBOUNCE_MS) return;
 
       // Check for interrupt command
+      // Process both interim and final results for faster response
       const command = matchInterruptCommand(transcript, commands);
+      console.log("[barge-in] command match:", command);
       if (command && onInterruptCallback) {
+        console.log("[barge-in] executing:", command);
         lastCommandTime = now;
         onInterruptCallback(command);
       }
@@ -213,6 +219,7 @@ export function startBargeIn(
     };
 
     recognition.start();
+    console.log("[barge-in] started listening during TTS");
   } catch (error) {
     console.warn("Failed to start barge-in recognition:", error);
     isBargeInActive = false;

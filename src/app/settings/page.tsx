@@ -281,6 +281,52 @@ export default function SettingsPage() {
               </button>
             </div>
 
+            {/* Audience Simulation */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Audience Simulation</div>
+                <div className="text-sm text-text-dim">
+                  Ambient crowd sounds during Test mode
+                </div>
+              </div>
+              <button
+                onClick={() => settings.updateSettings({ enableAudienceSimulation: !settings.enableAudienceSimulation })}
+                className={`
+                  w-14 h-8 rounded-full transition-colors relative
+                  ${settings.enableAudienceSimulation ? "bg-accent" : "bg-surface-light"}
+                `}
+              >
+                <div
+                  className={`
+                    absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all
+                    ${settings.enableAudienceSimulation ? "left-7" : "left-1"}
+                  `}
+                />
+              </button>
+            </div>
+
+            {/* Audience Volume */}
+            {settings.enableAudienceSimulation && (
+              <div className="pl-4 border-l-2 border-surface-light">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-text-dim">Audience Volume</span>
+                  <span className="font-medium">{Math.round(settings.audienceVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.5"
+                  step="0.05"
+                  value={settings.audienceVolume}
+                  onChange={(e) => settings.updateSettings({ audienceVolume: parseFloat(e.target.value) })}
+                  className="w-full accent-accent h-2"
+                />
+                <p className="text-xs text-text-dim mt-1">
+                  Simulates murmurs, coughs, and paper shuffling
+                </p>
+              </div>
+            )}
+
             {/* Reset Hints */}
             {settings.enableHints && (
               <div className="pl-4 border-l-2 border-surface-light">
