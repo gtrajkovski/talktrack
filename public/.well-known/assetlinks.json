@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.talktrack.app",
       "sha256_cert_fingerprints": [
-        "CF:C1:3D:96:BD:D3:BB:33:C2:17:0F:80:84:39:39:44:F5:AC:CC:A4:F1:A1:4E:88:CA:A8:CA:99:EE:E1:89:A0"
+        "CF:C1:3D:96:BD:D3:BB:33:C2:17:0F:80:84:39:39:44:F5:AC:CC:A4:F1:A1:4E:88:CA:A8:CA:99:EE:E1:89:A0",
+        "EB:BF:1C:17:4D:C9:30:03:B3:D0:5D:A6:AB:DB:19:8D:14:A2:7B:CD:9A:47:6B:29:6F:F8:3C:12:12:66:97:90"
       ]
     }
   }
