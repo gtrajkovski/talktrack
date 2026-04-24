@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { speak, stop } from "@/lib/speech/synthesis";
-import { getTopVoices, type VoiceOption } from "@/lib/speech/voices";
+import { getAvailableVoices, type VoiceOption } from "@/lib/speech/voices";
 import { useSettingsStore } from "@/stores/settingsStore";
 
 interface VoicePickerModalProps {
@@ -18,17 +18,27 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load voices after a short delay to ensure they're available
-    const timer = setTimeout(() => {
-      const topVoices = getTopVoices(5);
+    // Load voices asynchronously (handles Android delays)
+    let cancelled = false;
+
+    async function loadVoices() {
+      const allVoices = await getAvailableVoices();
+      if (cancelled) return;
+
+      const topVoices = allVoices.slice(0, 5);
       setVoices(topVoices);
+
       // Auto-select the first (best) voice if available
       if (topVoices.length > 0) {
         setSelectedVoice(topVoices[0].name);
       }
-    }, 100);
+    }
 
-    return () => clearTimeout(timer);
+    loadVoices();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Cleanup on unmount

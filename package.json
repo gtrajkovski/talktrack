@@ -47,6 +47,7 @@
     "eslint-config-next": "16.2.1",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.0.1",
+    "puppeteer": "^24.42.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5",
