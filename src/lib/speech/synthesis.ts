@@ -98,9 +98,50 @@ export function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
       return;
     }
 
-    speechSynthesis.onvoiceschanged = () => {
-      resolve(speechSynthesis.getVoices());
+    // Android workaround: trigger voice loading with a dummy utterance
+    const dummy = new SpeechSynthesisUtterance("");
+    speechSynthesis.speak(dummy);
+    speechSynthesis.cancel();
+
+    let resolved = false;
+
+    // Listen for voiceschanged event
+    const handler = () => {
+      if (resolved) return;
+      const v = speechSynthesis.getVoices();
+      if (v.length > 0) {
+        resolved = true;
+        speechSynthesis.onvoiceschanged = null;
+        resolve(v);
+      }
     };
+
+    speechSynthesis.onvoiceschanged = handler;
+
+    // Poll as fallback (some Android devices don't fire voiceschanged)
+    const poll = setInterval(() => {
+      if (resolved) {
+        clearInterval(poll);
+        return;
+      }
+      const v = speechSynthesis.getVoices();
+      if (v.length > 0) {
+        resolved = true;
+        clearInterval(poll);
+        speechSynthesis.onvoiceschanged = null;
+        resolve(v);
+      }
+    }, 100);
+
+    // Timeout after 5 seconds - resolve with whatever we have
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        clearInterval(poll);
+        speechSynthesis.onvoiceschanged = null;
+        resolve(speechSynthesis.getVoices());
+      }
+    }, 5000);
   });
 }
 
