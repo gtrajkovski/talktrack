@@ -16,10 +16,18 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
   const [selectedVoice, setSelectedVoice] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [loadingState, setLoadingState] = useState<"loading" | "loaded" | "timeout">("loading");
 
   useEffect(() => {
     // Load voices asynchronously (handles Android delays)
     let cancelled = false;
+
+    // Timeout after 8 seconds
+    const timeout = setTimeout(() => {
+      if (!cancelled && loadingState === "loading") {
+        setLoadingState("timeout");
+      }
+    }, 8000);
 
     async function loadVoices() {
       const allVoices = await getAvailableVoices();
@@ -27,6 +35,7 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
 
       const topVoices = allVoices.slice(0, 5);
       setVoices(topVoices);
+      setLoadingState("loaded");
 
       // Auto-select the first (best) voice if available
       if (topVoices.length > 0) {
@@ -38,8 +47,9 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
-  }, []);
+  }, [loadingState]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -111,9 +121,20 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
 
         {/* Voice List */}
         <div className="space-y-2 mb-6">
-          {voices.length === 0 ? (
+          {loadingState === "loading" && voices.length === 0 ? (
             <div className="text-center py-8 text-text-dim">
-              Loading voices...
+              <div className="animate-pulse">Loading voices...</div>
+              <div className="text-xs mt-2">This may take a few seconds on mobile</div>
+            </div>
+          ) : loadingState === "timeout" && voices.length === 0 ? (
+            <div className="text-center py-8 text-text-dim">
+              <div className="text-warning mb-2">Could not load voices</div>
+              <div className="text-xs">Your device may not support text-to-speech, or voices are still loading.</div>
+              <div className="text-xs mt-2">You can skip this and use the default voice.</div>
+            </div>
+          ) : voices.length === 0 ? (
+            <div className="text-center py-8 text-text-dim">
+              No voices available on this device.
             </div>
           ) : (
             voices.map((voice, index) => (

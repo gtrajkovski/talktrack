@@ -109,9 +109,17 @@ const QUALITY_ORDER: Record<VoiceQuality, number> = {
 export async function getAvailableVoices(): Promise<VoiceOption[]> {
   const voices = await waitForVoices();
 
-  return voices
+  // Filter to English voices first
+  let filtered = voices
     .filter((v) => v.lang.startsWith("en"))
-    .filter((v) => !isBlocked(v.name))
+    .filter((v) => !isBlocked(v.name));
+
+  // If no English voices, fall back to ALL voices (some Android devices)
+  if (filtered.length === 0) {
+    filtered = voices.filter((v) => !isBlocked(v.name));
+  }
+
+  return filtered
     .map((v) => ({
       name: v.name,
       lang: v.lang,
