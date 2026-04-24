@@ -201,24 +201,15 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
 
         {/* Actions */}
         <div className="space-y-3">
-          {voices.length > 0 && selectedVoice ? (
+          {voices.length > 0 && selectedVoice && (
             <Button onClick={handleContinue}>
               {isPlaying ? "Playing..." : "Continue with Selected"}
             </Button>
-          ) : (
-            <Button onClick={handleUseDefault}>
-              Skip & Use Default Voice
-            </Button>
           )}
 
-          {voices.length > 0 && (
-            <button
-              onClick={handleUseDefault}
-              className="w-full text-center text-sm text-text-dim py-2 hover:text-text transition-colors"
-            >
-              Use system default instead
-            </button>
-          )}
+          <Button variant={voices.length > 0 ? "secondary" : "primary"} onClick={handleUseDefault}>
+            {voices.length > 0 ? "Use Default Voice" : "Skip & Continue"}
+          </Button>
         </div>
 
         {/* Premium voices hint */}
