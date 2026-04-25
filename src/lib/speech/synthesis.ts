@@ -383,7 +383,9 @@ export function stop(): void {
     usingElevenLabs = false;
   }
 
-  speechSynthesis.cancel();
+  if (typeof speechSynthesis !== "undefined") {
+    speechSynthesis.cancel();
+  }
   _currentUtterance = null;
   _onEndCallback = null;
 }
