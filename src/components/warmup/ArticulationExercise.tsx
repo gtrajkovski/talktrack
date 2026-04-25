@@ -36,9 +36,12 @@ export function ArticulationExercise({
   const phrases = exercise.phrases ?? [];
   const currentPhrase = phrases[currentPhraseIndex];
 
-  // Use ref to track current index to avoid stale closures
+  // Use refs to avoid stale closures
   const currentPhraseIndexRef = useRef(currentPhraseIndex);
   currentPhraseIndexRef.current = currentPhraseIndex;
+
+  // Ref for speakPhrase to avoid effect re-runs
+  const speakPhraseRef = useRef<() => void>(() => {});
 
   // Clean up on unmount
   useEffect(() => {
@@ -68,13 +71,16 @@ export function ArticulationExercise({
         setWaitingForUser(true);
         // Auto-advance after 5 seconds if user doesn't say "next"
         setTimeout(() => {
-          if (isMountedRef.current && waitingForUser) {
+          if (isMountedRef.current) {
             handleNextPhrase();
           }
         }, 5000);
       },
     });
-  }, [phrases, speechRate, voiceName, waitingForUser]);
+  }, [phrases, speechRate, voiceName]);
+
+  // Keep ref updated
+  speakPhraseRef.current = speakPhrase;
 
   // Handle advancing to next phrase
   const handleNextPhrase = useCallback(() => {
@@ -88,7 +94,7 @@ export function ArticulationExercise({
       // Brief pause before next phrase
       setTimeout(() => {
         if (isMountedRef.current) {
-          speakPhrase();
+          speakPhraseRef.current();
         }
       }, 500);
     } else {
@@ -105,7 +111,7 @@ export function ArticulationExercise({
         },
       });
     }
-  }, [onNextPhrase, onStateChange, onExerciseComplete, speechRate, voiceName, speakPhrase]);
+  }, [onNextPhrase, onStateChange, onExerciseComplete, speechRate, voiceName]);
 
   // Start exercise when state changes to instructing
   useEffect(() => {
@@ -117,12 +123,12 @@ export function ArticulationExercise({
         onEnd: () => {
           if (isMountedRef.current) {
             onStateChange("exercising");
-            speakPhrase();
+            speakPhraseRef.current();
           }
         },
       });
     }
-  }, [exerciseState, exercise.instructions, speechRate, voiceName, onStateChange, speakPhrase]);
+  }, [exerciseState, exercise.instructions, speechRate, voiceName, onStateChange]);
 
   // Handle "next" command from voice
   useEffect(() => {
