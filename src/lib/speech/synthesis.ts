@@ -92,6 +92,12 @@ export function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
       return;
     }
 
+    // Check if speechSynthesis is available
+    if (typeof speechSynthesis === "undefined") {
+      resolve([]);
+      return;
+    }
+
     const voices = speechSynthesis.getVoices();
     if (voices.length > 0) {
       resolve(voices);
@@ -99,9 +105,15 @@ export function waitForVoices(): Promise<SpeechSynthesisVoice[]> {
     }
 
     // Android workaround: trigger voice loading with a dummy utterance
-    const dummy = new SpeechSynthesisUtterance("");
-    speechSynthesis.speak(dummy);
-    speechSynthesis.cancel();
+    try {
+      const dummy = new SpeechSynthesisUtterance("");
+      speechSynthesis.speak(dummy);
+      speechSynthesis.cancel();
+    } catch {
+      // Speech API is broken on this device - return empty
+      resolve([]);
+      return;
+    }
 
     let resolved = false;
 

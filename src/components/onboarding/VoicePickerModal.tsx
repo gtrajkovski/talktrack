@@ -21,25 +21,36 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
   useEffect(() => {
     // Load voices asynchronously (handles Android delays)
     let cancelled = false;
+    let hasResolved = false;
 
-    // Timeout after 8 seconds
+    // Timeout after 8 seconds - show skip option if voices haven't loaded
     const timeout = setTimeout(() => {
-      if (!cancelled && loadingState === "loading") {
+      if (!cancelled && !hasResolved) {
         setLoadingState("timeout");
       }
     }, 8000);
 
     async function loadVoices() {
-      const allVoices = await getAvailableVoices();
-      if (cancelled) return;
+      try {
+        const allVoices = await getAvailableVoices();
+        if (cancelled) return;
+        hasResolved = true;
 
-      const topVoices = allVoices.slice(0, 5);
-      setVoices(topVoices);
-      setLoadingState("loaded");
+        const topVoices = allVoices.slice(0, 5);
+        setVoices(topVoices);
+        setLoadingState("loaded");
 
-      // Auto-select the first (best) voice if available
-      if (topVoices.length > 0) {
-        setSelectedVoice(topVoices[0].name);
+        // Auto-select the first (best) voice if available
+        if (topVoices.length > 0) {
+          setSelectedVoice(topVoices[0].name);
+        }
+      } catch (error) {
+        // Speech API failed entirely - let user skip
+        console.warn("Failed to load voices:", error);
+        if (!cancelled) {
+          hasResolved = true;
+          setLoadingState("timeout");
+        }
       }
     }
 
@@ -49,7 +60,7 @@ export function VoicePickerModal({ onClose }: VoicePickerModalProps) {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [loadingState]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
   useEffect(() => {
