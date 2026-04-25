@@ -36,6 +36,10 @@ export function ArticulationExercise({
   const phrases = exercise.phrases ?? [];
   const currentPhrase = phrases[currentPhraseIndex];
 
+  // Use ref to track current index to avoid stale closures
+  const currentPhraseIndexRef = useRef(currentPhraseIndex);
+  currentPhraseIndexRef.current = currentPhraseIndex;
+
   // Clean up on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -47,12 +51,16 @@ export function ArticulationExercise({
 
   // Speak current phrase and wait for user to repeat
   const speakPhrase = useCallback(() => {
-    if (!isMountedRef.current || !currentPhrase) return;
+    if (!isMountedRef.current) return;
+
+    // Get phrase from ref to avoid stale closure
+    const phrase = phrases[currentPhraseIndexRef.current];
+    if (!phrase) return;
 
     setShowingPhrase(true);
     setWaitingForUser(false);
 
-    voicebox.play(currentPhrase, {
+    voicebox.play(phrase, {
       rate: speechRate * 0.9, // Slightly slower for clarity
       voiceName: voiceName || undefined,
       onEnd: () => {
@@ -66,7 +74,7 @@ export function ArticulationExercise({
         }, 5000);
       },
     });
-  }, [currentPhrase, speechRate, voiceName, waitingForUser]);
+  }, [phrases, speechRate, voiceName, waitingForUser]);
 
   // Handle advancing to next phrase
   const handleNextPhrase = useCallback(() => {
