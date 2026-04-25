@@ -19,6 +19,7 @@ let cachedDefaultVoice: SpeechSynthesisVoice | null = null;
  */
 function getDefaultVoice(): SpeechSynthesisVoice | null {
   if (cachedDefaultVoice) return cachedDefaultVoice;
+  if (typeof speechSynthesis === "undefined") return null;
 
   const voices = speechSynthesis.getVoices();
   if (voices.length === 0) return null;
@@ -82,6 +83,7 @@ function splitIntoSentences(text: string): string[] {
 
 export function getVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined") return [];
+  if (typeof speechSynthesis === "undefined") return [];
   return speechSynthesis.getVoices();
 }
 
@@ -316,6 +318,13 @@ function webSpeechSpeak(
 ): void {
   const { rate = 0.95, volume = 1.0, voiceName, onEnd } = options;
 
+  // Check if Speech API is available
+  if (typeof speechSynthesis === "undefined" || typeof SpeechSynthesisUtterance === "undefined") {
+    // Speech not available - just call onEnd so app can continue
+    onEnd?.();
+    return;
+  }
+
   // Break long text into sentences to avoid Chrome Android bug
   const sentences = splitIntoSentences(text);
 
@@ -397,7 +406,7 @@ export function pause(): void {
     voiceboxClone.pause();
   } else if (usingElevenLabs) {
     elevenLabs.pause();
-  } else {
+  } else if (typeof speechSynthesis !== "undefined") {
     speechSynthesis.pause();
   }
 }
@@ -409,7 +418,7 @@ export function resume(): void {
     voiceboxClone.resume();
   } else if (usingElevenLabs) {
     elevenLabs.resume();
-  } else {
+  } else if (typeof speechSynthesis !== "undefined") {
     speechSynthesis.resume();
   }
 }
@@ -425,6 +434,7 @@ export function isSpeaking(): boolean {
     return elevenLabs.isSpeaking();
   }
 
+  if (typeof speechSynthesis === "undefined") return false;
   return speechSynthesis.speaking;
 }
 
@@ -439,6 +449,7 @@ export function isPaused(): boolean {
     return elevenLabs.isPaused();
   }
 
+  if (typeof speechSynthesis === "undefined") return false;
   return speechSynthesis.paused;
 }
 
