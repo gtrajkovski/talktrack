@@ -342,14 +342,20 @@ function webSpeechSpeak(
     utterance.rate = rate;
     utterance.volume = volume;
 
-    // Set voice: use specified voice, or fall back to cached default for consistency
+    // Set voice: use specified voice, fall back to cached default, or first available
     const voices = speechSynthesis.getVoices();
     if (voiceName) {
       const voice = voices.find((v) => v.name === voiceName);
       if (voice) utterance.voice = voice;
     } else {
       const defaultVoice = getDefaultVoice();
-      if (defaultVoice) utterance.voice = defaultVoice;
+      if (defaultVoice) {
+        utterance.voice = defaultVoice;
+      } else if (voices.length > 0) {
+        // Fallback: use first available voice if no default
+        utterance.voice = voices[0];
+      }
+      // If no voices available, leave utterance.voice unset and hope system default works
     }
 
     utterance.onend = () => {
@@ -372,7 +378,16 @@ function webSpeechSpeak(
 
     _currentUtterance = utterance;
     _onEndCallback = onEnd || null;
-    speechSynthesis.speak(utterance);
+
+    try {
+      speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis speak failed:", e);
+      // Call onEnd so app can continue
+      _currentUtterance = null;
+      _onEndCallback = null;
+      onEnd?.();
+    }
   };
 
   speakNextSentence();

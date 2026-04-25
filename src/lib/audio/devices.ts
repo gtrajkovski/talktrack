@@ -190,6 +190,11 @@ export async function warmupPreferredMic(): Promise<MediaStream | null> {
   const { label, groupId } = getCachedMicPreference();
   if (!label) return null;
 
+  // Check if mediaDevices is available
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return null;
+  }
+
   try {
     const deviceId = await resolveDeviceId("audioinput", label, groupId);
     if (!deviceId) return null;
