@@ -19,10 +19,12 @@ let speakerApplied = false;
 /**
  * Get or create AudioContext
  */
-function getContext(): AudioContext {
+function getContext(): AudioContext | null {
   if (!audioContext) {
-    audioContext = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audioContext = new AudioContextClass();
     speakerApplied = false;
   }
   if (audioContext.state === "suspended") {
@@ -71,6 +73,7 @@ function createPinkNoiseBuffer(ctx: AudioContext, duration: number): AudioBuffer
  */
 function startMurmur(): void {
   const ctx = getContext();
+  if (!ctx) return;
 
   // Create pink noise buffer (loop every 3 seconds)
   const buffer = createPinkNoiseBuffer(ctx, 3);
@@ -110,6 +113,7 @@ function startMurmur(): void {
  */
 function playCough(): void {
   const ctx = getContext();
+  if (!ctx) return;
 
   // Cough is a burst of filtered noise
   const duration = 0.15 + Math.random() * 0.1;
@@ -148,6 +152,7 @@ function playCough(): void {
  */
 function playPaperShuffle(): void {
   const ctx = getContext();
+  if (!ctx) return;
 
   const duration = 0.3 + Math.random() * 0.2;
   const bufferSize = ctx.sampleRate * duration;
@@ -188,6 +193,7 @@ function playPaperShuffle(): void {
  */
 function playChairCreak(): void {
   const ctx = getContext();
+  if (!ctx) return;
 
   const osc = ctx.createOscillator();
   osc.type = "sine";

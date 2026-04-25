@@ -20,8 +20,10 @@ type AudioElementWithSink = HTMLAudioElement & {
  */
 export function supportsAudioContextSinkId(): boolean {
   if (typeof window === "undefined") return false;
-  const ctx = new (window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  const AudioContextClass = window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return false;
+  const ctx = new AudioContextClass();
   const supported = typeof (ctx as AudioContextWithSink).setSinkId === "function";
   ctx.close();
   return supported;

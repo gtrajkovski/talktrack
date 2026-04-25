@@ -99,7 +99,10 @@
       "Bash(node:*)",
       "Bash(npx vercel env ls:*)",
       "Bash(npx vercel env pull:*)",
-      "Bash(del \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\\\\.env.vercel\")"
+      "Bash(del \"C:\\\\Users\\\\gpt30\\\\Projects\\\\talktrack\\\\.env.vercel\")",
+      "Bash(npx vitest:*)",
+      "Bash(npx vercel:*)",
+      "Bash(gh run list:*)"
     ]
   }
 }

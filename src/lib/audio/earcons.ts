@@ -28,10 +28,12 @@ function shouldPlay(): boolean {
 /**
  * Get or create AudioContext with iOS resume handling and speaker routing
  */
-function getContext(): AudioContext {
+function getContext(): AudioContext | null {
   if (!audioContext) {
-    audioContext = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audioContext = new AudioContextClass();
     speakerApplied = false;
   }
   // Resume if suspended (iOS requires user gesture to activate)
@@ -70,6 +72,7 @@ function playTone(
 ): void {
   try {
     const ctx = getContext();
+    if (!ctx) return;
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
 
@@ -171,6 +174,7 @@ export function commandRecognized(): void {
   if (!shouldPlay()) return;
   try {
     const ctx = getContext();
+    if (!ctx) return;
     const bufferSize = Math.floor(ctx.sampleRate * 0.03);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -236,6 +240,7 @@ export function sessionComplete(): void {
   if (!shouldPlay()) return;
   try {
     const ctx = getContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Play chord with slight stagger for warmth
@@ -311,6 +316,7 @@ export function navigationJump(): void {
   if (!shouldPlay()) return;
   try {
     const ctx = getContext();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -475,6 +481,7 @@ export function coachStart(): void {
   if (!shouldPlay()) return;
   try {
     const ctx = getContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Warm major third: A3 → C#4
@@ -519,6 +526,7 @@ export function breathingTone(frequency: number = 220): () => void {
 
   try {
     const ctx = getContext();
+    if (!ctx) return () => {};
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 

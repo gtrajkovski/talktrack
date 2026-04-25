@@ -1,8 +1,11 @@
 let audioContext: AudioContext | null = null;
 
-function getAudioContext(): AudioContext {
+function getAudioContext(): AudioContext | null {
   if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const AudioContextClass = window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audioContext = new AudioContextClass();
   }
   return audioContext;
 }
@@ -15,6 +18,7 @@ function playTone(
 ): void {
   try {
     const ctx = getAudioContext();
+    if (!ctx) return;
 
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
