@@ -123,15 +123,38 @@ export function ConferenceDayPage({ talk }: ConferenceDayPageProps) {
 
         <Card>
           <div className="flex flex-col items-center gap-4">
-            <input
-              type="time"
-              value={scheduledTime}
-              onChange={(e) => setScheduledTime(e.target.value)}
-              className="text-3xl font-mono bg-surface border border-surface-light rounded-lg px-4 py-3 text-center"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="23"
+                placeholder="HH"
+                value={scheduledTime.split(":")[0] || ""}
+                onChange={(e) => {
+                  const hr = e.target.value.padStart(2, "0");
+                  const min = scheduledTime.split(":")[1] || "00";
+                  setScheduledTime(`${hr}:${min}`);
+                }}
+                className="w-20 text-3xl font-mono bg-surface border border-surface-light rounded-lg px-3 py-3 text-center"
+              />
+              <span className="text-3xl font-mono">:</span>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                placeholder="MM"
+                value={scheduledTime.split(":")[1] || ""}
+                onChange={(e) => {
+                  const hr = scheduledTime.split(":")[0] || "00";
+                  const min = e.target.value.padStart(2, "0");
+                  setScheduledTime(`${hr}:${min}`);
+                }}
+                className="w-20 text-3xl font-mono bg-surface border border-surface-light rounded-lg px-3 py-3 text-center"
+              />
+            </div>
             <Button
               onClick={handleSetTime}
-              disabled={!scheduledTime}
+              disabled={!scheduledTime || !scheduledTime.includes(":")}
               className="w-full"
             >
               Set Time
