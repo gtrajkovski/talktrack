@@ -8,6 +8,7 @@ import { RehearsalControls } from "./RehearsalControls";
 import { TranscriptScore } from "./TranscriptScore";
 import { TimerOverlay } from "./TimerOverlay";
 import { SessionTimer } from "./SessionTimer";
+import { MicPermissionBanner } from "./MicPermissionBanner";
 import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import { PlaybackIndicator } from "./PlaybackIndicator";
@@ -16,7 +17,7 @@ import { startRecording, saveRecording, isRecordingSupported } from "@/lib/audio
 import { calculateSimilarity } from "@/lib/scoring/similarity";
 import { recordSlideScore } from "@/lib/db/talks";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
-import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
+import { warmupPreferredMic, stopStream, requestMicPermission } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
@@ -72,6 +73,8 @@ export function PromptMode({
   const [status, setStatus] = useState<"playing" | "listening" | "idle" | "error">("idle");
   const [revealed, setRevealed] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+  const [micErrorMessage, setMicErrorMessage] = useState<string | null>(null);
 
   // Sync earcons with settings and play on state transitions
   useEarconSync();
@@ -186,8 +189,9 @@ export function PromptMode({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn("Speech recognition not supported");
-      setStatus("idle");
-      setAudioState("idle");
+      setStatus("error");
+      setAudioState("error");
+      setMicErrorMessage("Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return;
     }
 
@@ -199,6 +203,20 @@ export function PromptMode({
     }
 
     try {
+      // Ensure we have mic permission before starting
+      const permissionResult = await requestMicPermission();
+      if (!permissionResult.granted) {
+        setStatus("error");
+        setAudioState("error");
+        setMicErrorMessage(permissionResult.error || "Microphone access denied");
+        setMicPermissionGranted(false);
+        return;
+      }
+      // Stop the permission check stream
+      stopStream(permissionResult.stream);
+      setMicPermissionGranted(true);
+      setMicErrorMessage(null);
+
       // Warm up preferred mic (may help route recognition to selected device)
       micWarmupStreamRef.current = await warmupPreferredMic();
 
@@ -275,8 +293,17 @@ export function PromptMode({
 
         console.warn("Speech recognition error:", e.error);
 
+        // Handle permission errors specifically
+        if (e.error === "not-allowed" || e.error === "audio-capture") {
+          setStatus("error");
+          setAudioState("error");
+          setMicPermissionGranted(false);
+          setMicErrorMessage("Microphone access denied. Please enable microphone permission and try again.");
+          return;
+        }
+
         // Handle network/service errors with recovery
-        if (e.error === "network" || e.error === "service-not-allowed" || e.error === "audio-capture") {
+        if (e.error === "network" || e.error === "service-not-allowed") {
           const retryIndex = Math.min(errorRetryCountRef.current, ERROR_RETRY_DELAYS.length - 1);
           const delay = ERROR_RETRY_DELAYS[retryIndex];
           errorRetryCountRef.current++;
@@ -285,10 +312,12 @@ export function PromptMode({
             // Retry with exponential backoff
             setStatus("error");
             setAudioState("error");
+            setMicErrorMessage("Reconnecting to voice service...");
             setTimeout(() => {
               if (isMountedRef.current && isListeningRef.current) {
                 setStatus("listening");
                 setAudioState("listening");
+                setMicErrorMessage(null);
                 startListeningRef.current();
               }
             }, delay);
@@ -296,6 +325,7 @@ export function PromptMode({
             // Too many errors, stay in error state
             setStatus("error");
             setAudioState("error");
+            setMicErrorMessage("Voice recognition unavailable. Please check your internet connection and refresh the page.");
           }
         }
       };
@@ -545,9 +575,38 @@ export function PromptMode({
     };
   }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Callback for when mic permission is granted via banner
+  const handleMicPermissionGranted = useCallback(() => {
+    setMicPermissionGranted(true);
+    setMicErrorMessage(null);
+    // Re-trigger the prompt speak which will start listening
+    speakPrompt();
+  }, [speakPrompt]);
+
   return (
     <div className="flex flex-col h-full">
       <ProgressBar value={progress} size="lg" className="mb-6" />
+
+      {/* Mic permission banner - shown when permission needed */}
+      {!micPermissionGranted && status === "error" && (
+        <MicPermissionBanner onPermissionGranted={handleMicPermissionGranted} />
+      )}
+
+      {/* Error message banner */}
+      {micErrorMessage && micPermissionGranted && (
+        <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 mx-4 mb-4">
+          <p className="text-sm text-red-400 text-center">{micErrorMessage}</p>
+          <button
+            onClick={() => {
+              setMicErrorMessage(null);
+              startListening();
+            }}
+            className="mt-2 w-full text-sm text-amber-400 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Slide title with position label */}
       <div className="text-center mb-4 px-4">

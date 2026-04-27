@@ -217,3 +217,67 @@ export function stopStream(stream: MediaStream | null): void {
     stream.getTracks().forEach(track => track.stop());
   }
 }
+
+/**
+ * Microphone permission status
+ */
+export type MicPermissionStatus = "granted" | "denied" | "prompt" | "unavailable";
+
+/**
+ * Check the current microphone permission status without prompting.
+ * Returns "unavailable" if the Permissions API is not supported.
+ */
+export async function checkMicPermission(): Promise<MicPermissionStatus> {
+  if (typeof navigator === "undefined") return "unavailable";
+
+  // Check if Permissions API is available
+  if (navigator.permissions?.query) {
+    try {
+      const result = await navigator.permissions.query({ name: "microphone" as PermissionName });
+      return result.state as MicPermissionStatus;
+    } catch {
+      // Safari doesn't support microphone permission query
+    }
+  }
+
+  // Fallback: check if mediaDevices is available
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return "unavailable";
+  }
+
+  // Can't determine without prompting - assume prompt state
+  return "prompt";
+}
+
+/**
+ * Request microphone permission by calling getUserMedia.
+ * Returns true if permission was granted, false otherwise.
+ * Also returns the stream if successful (caller should stop it when done).
+ */
+export async function requestMicPermission(): Promise<{ granted: boolean; stream: MediaStream | null; error?: string }> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return { granted: false, stream: null, error: "Microphone not available on this device" };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return { granted: true, stream };
+  } catch (e) {
+    const error = e as DOMException;
+    if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+      return { granted: false, stream: null, error: "Microphone permission denied. Please allow microphone access in your browser settings." };
+    }
+    if (error.name === "NotFoundError") {
+      return { granted: false, stream: null, error: "No microphone found. Please connect a microphone." };
+    }
+    return { granted: false, stream: null, error: `Microphone error: ${error.message}` };
+  }
+}
+
+/**
+ * Check if Speech Recognition API is available
+ */
+export function isSpeechRecognitionSupported(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}

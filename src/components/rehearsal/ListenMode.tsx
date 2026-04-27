@@ -6,11 +6,12 @@ import { StateOrb } from "./StateOrb";
 import { RehearsalControls } from "./RehearsalControls";
 import { PlaybackIndicator } from "./PlaybackIndicator";
 import { SessionTimer } from "./SessionTimer";
+import { MicPermissionBanner } from "./MicPermissionBanner";
 import { isSpeaking } from "@/lib/speech/synthesis";
 import * as voicebox from "@/lib/speech/voicebox";
 import * as earcons from "@/lib/audio/earcons";
 import { getCommands, getRecognitionLocale, matchCommand } from "@/lib/i18n/voiceCommands";
-import { warmupPreferredMic, stopStream } from "@/lib/audio/devices";
+import { warmupPreferredMic, stopStream, requestMicPermission } from "@/lib/audio/devices";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRehearsalStore } from "@/stores/rehearsalStore";
 import { useEarconSync } from "@/hooks/useEarconSync";
@@ -53,7 +54,9 @@ export function ListenMode({
   const { setAudioState, setLastCommand } = useRehearsalStore();
   const commands = getCommands(commandLanguage);
   const recognitionLocale = getRecognitionLocale(commandLanguage);
-  const [status, setStatus] = useState<"playing" | "paused" | "idle">("idle");
+  const [status, setStatus] = useState<"playing" | "paused" | "idle" | "error">("idle");
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+  const [micErrorMessage, setMicErrorMessage] = useState<string | null>(null);
 
   // Sync earcons with settings
   useEarconSync();
@@ -145,12 +148,27 @@ export function ListenMode({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn("Speech recognition not supported");
+      setStatus("error");
+      setMicErrorMessage("Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return;
     }
 
     stopListening();
 
     try {
+      // Ensure we have mic permission before starting
+      const permissionResult = await requestMicPermission();
+      if (!permissionResult.granted) {
+        setStatus("error");
+        setMicPermissionGranted(false);
+        setMicErrorMessage(permissionResult.error || "Microphone access denied");
+        return;
+      }
+      // Stop the permission check stream
+      stopStream(permissionResult.stream);
+      setMicPermissionGranted(true);
+      setMicErrorMessage(null);
+
       // Warm up preferred mic (may help route recognition to selected device)
       micWarmupStreamRef.current = await warmupPreferredMic();
 
@@ -211,6 +229,13 @@ export function ListenMode({
         // Ignore expected errors
         if (e.error === "aborted" || e.error === "no-speech") return;
         console.warn("Speech recognition error:", e.error);
+
+        // Handle permission errors specifically
+        if (e.error === "not-allowed" || e.error === "audio-capture") {
+          setStatus("error");
+          setMicPermissionGranted(false);
+          setMicErrorMessage("Microphone access denied. Please enable microphone permission and try again.");
+        }
       };
 
       recognition.start();
@@ -219,6 +244,8 @@ export function ListenMode({
       earcons.micOn();
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
+      setStatus("error");
+      setMicErrorMessage("Failed to start voice recognition. Please try again.");
     }
   }, [checkCommand, stopListening, recognitionLocale]);
 
@@ -457,10 +484,39 @@ export function ListenMode({
     };
   }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Callback for when mic permission is granted via banner
+  const handleMicPermissionGranted = useCallback(() => {
+    setMicPermissionGranted(true);
+    setMicErrorMessage(null);
+    // Re-trigger content playback which will start listening after
+    speakContent();
+  }, [speakContent]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Progress */}
       <ProgressBar value={progress} size="lg" className="mb-6" />
+
+      {/* Mic permission banner - shown when permission needed */}
+      {!micPermissionGranted && status === "error" && (
+        <MicPermissionBanner onPermissionGranted={handleMicPermissionGranted} />
+      )}
+
+      {/* Error message banner */}
+      {micErrorMessage && micPermissionGranted && (
+        <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 mx-4 mb-4">
+          <p className="text-sm text-red-400 text-center">{micErrorMessage}</p>
+          <button
+            onClick={() => {
+              setMicErrorMessage(null);
+              startListening();
+            }}
+            className="mt-2 w-full text-sm text-amber-400 underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Slide title with position label */}
       <div className="text-center mb-4 px-4">
