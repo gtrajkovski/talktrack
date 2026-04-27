@@ -160,11 +160,16 @@ export function PromptMode({
 
   // Start speech recognition with error recovery
   const startListening = useCallback(async () => {
+    console.log("[PromptMode] startListening called");
     if (typeof window === "undefined") return;
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current) {
+      console.log("[PromptMode] Component not mounted, skipping");
+      return;
+    }
 
     // iOS: Don't start listening if TTS is still speaking (300ms buffer)
     if (isIOS && isSpeaking()) {
+      console.log("[PromptMode] iOS speaking, delaying 300ms");
       setTimeout(() => startListeningRef.current(), 300);
       return;
     }
@@ -188,12 +193,13 @@ export function PromptMode({
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported");
+      console.warn("[PromptMode] Speech recognition not supported");
       setStatus("error");
       setAudioState("error");
       setMicErrorMessage("Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
       return;
     }
+    console.log("[PromptMode] SpeechRecognition API available");
 
     stopListening();
 
@@ -204,7 +210,9 @@ export function PromptMode({
 
     try {
       // Ensure we have mic permission before starting
+      console.log("[PromptMode] Requesting mic permission...");
       const permissionResult = await requestMicPermission();
+      console.log("[PromptMode] Permission result:", permissionResult.granted, permissionResult.error);
       if (!permissionResult.granted) {
         setStatus("error");
         setAudioState("error");
@@ -219,11 +227,16 @@ export function PromptMode({
 
       // Warm up preferred mic (may help route recognition to selected device)
       micWarmupStreamRef.current = await warmupPreferredMic();
+      console.log("[PromptMode] Mic warmed up, starting recognition...");
 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = recognitionLocale;
+
+      recognition.onstart = () => {
+        console.log("[PromptMode] Recognition started successfully");
+      };
 
       recognition.onresult = (event) => {
         if (!isMountedRef.current) return;
@@ -233,6 +246,7 @@ export function PromptMode({
         for (let i = 0; i < event.results.length; i++) {
           fullTranscript += event.results[i][0].transcript;
         }
+        console.log("[PromptMode] Got transcript:", fullTranscript.slice(-50));
         setTranscript(fullTranscript);
         setStoreTranscript(fullTranscript);
         transcriptRef.current = fullTranscript;
@@ -266,6 +280,7 @@ export function PromptMode({
       };
 
       recognition.onend = () => {
+        console.log("[PromptMode] Recognition ended, isListening:", isListeningRef.current, "isMounted:", isMountedRef.current);
         // Auto-restart if we should still be listening and component is mounted
         if (isListeningRef.current && isMountedRef.current) {
           // iOS: Check TTS isn't speaking before restarting
@@ -278,20 +293,23 @@ export function PromptMode({
             return;
           }
           try {
+            console.log("[PromptMode] Auto-restarting recognition...");
             recognition.start();
-          } catch {
-            // Ignore restart errors
+          } catch (e) {
+            console.warn("[PromptMode] Failed to restart recognition:", e);
           }
         }
       };
 
       recognition.onerror = (e) => {
+        console.error("[PromptMode] Recognition error:", e.error);
         if (!isMountedRef.current) return;
 
         // Ignore expected errors
-        if (e.error === "aborted" || e.error === "no-speech") return;
-
-        console.warn("Speech recognition error:", e.error);
+        if (e.error === "aborted" || e.error === "no-speech") {
+          console.log("[PromptMode] Ignoring expected error:", e.error);
+          return;
+        }
 
         // Handle permission errors specifically
         if (e.error === "not-allowed" || e.error === "audio-capture") {
@@ -330,17 +348,20 @@ export function PromptMode({
         }
       };
 
+      console.log("[PromptMode] Calling recognition.start()...");
       recognition.start();
       recognitionRef.current = recognition;
       isListeningRef.current = true;
       errorRetryCountRef.current = 0;
       setStatus("listening");
       setAudioState("listening");
+      console.log("[PromptMode] Recognition start() called, status set to listening");
       earcons.micOn(); // Audio feedback that mic is now active
     } catch (e) {
-      console.warn("Failed to start speech recognition:", e);
+      console.error("[PromptMode] Failed to start speech recognition:", e);
       setStatus("error");
       setAudioState("error");
+      setMicErrorMessage("Failed to start voice recognition: " + (e instanceof Error ? e.message : String(e)));
     }
   }, [checkCommand, stopListening, recognitionLocale, canRecord, setAudioState, setStoreTranscript]);
 
@@ -637,12 +658,14 @@ export function PromptMode({
       <div className="flex-1 flex flex-col items-center justify-center">
         <StateOrb
           onTap={() => {
-            // Toggle pause/resume
+            console.log("[PromptMode] StateOrb tapped, current status:", status);
+            // Toggle pause/resume or retry on error
             if (status === "listening") {
               stopListening();
               setStatus("idle");
               setAudioState("paused");
-            } else if (status === "idle") {
+            } else if (status === "idle" || status === "error") {
+              setMicErrorMessage(null);
               startListening();
             }
           }}

@@ -93,6 +93,11 @@ export function StateOrb({ onTap }: StateOrbProps) {
         `}
       />
 
+      {/* State label - visible for debugging */}
+      <div className="text-sm font-medium text-text-dim uppercase tracking-wide">
+        {config.label}
+      </div>
+
       {/* Slide counter - large and glanceable */}
       <div
         className="text-2xl font-extrabold text-text tracking-tight"

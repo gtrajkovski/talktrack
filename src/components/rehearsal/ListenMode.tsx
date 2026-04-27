@@ -539,9 +539,13 @@ export function ListenMode({
       <div className="flex justify-center mb-2">
         <StateOrb
           onTap={() => {
-            // Toggle pause/resume
+            console.log("[ListenMode] StateOrb tapped, current status:", status);
+            // Toggle pause/resume or retry on error
             if (status === "playing") {
               handlePause();
+            } else if (status === "error") {
+              setMicErrorMessage(null);
+              startListening();
             } else {
               handleResume();
             }

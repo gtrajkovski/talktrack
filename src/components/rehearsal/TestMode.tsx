@@ -651,12 +651,14 @@ export function TestMode({
       <div className="flex-1 flex flex-col items-center justify-center">
         <StateOrb
           onTap={() => {
-            // Toggle pause/resume
+            console.log("[TestMode] StateOrb tapped, current status:", status);
+            // Toggle pause/resume or retry on error
             if (status === "listening") {
               stopListening();
               setStatus("idle");
               setAudioState("paused");
-            } else if (status === "idle") {
+            } else if (status === "idle" || status === "error") {
+              setMicErrorMessage(null);
               startListening();
             }
           }}
